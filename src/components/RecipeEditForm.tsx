@@ -6,18 +6,14 @@ interface RecipeEditFormProps {
     recipe: Recipe;
     onSave: (recipe: Recipe) => void;
     onCancel: () => void;
-    availableTags: string[];
 }
 
-const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags }: RecipeEditFormProps) => {
+const RecipeEditForm = ({ recipe, onSave, onCancel }: RecipeEditFormProps) => {
     // Initialize state with existing recipe data
     const [title, setTitle] = useState(recipe.title);
     const [prepTime, setPrepTime] = useState(recipe.prepTime);
     const [cookTime, setCookTime] = useState(recipe.cookTime);
     const [servings, setServings] = useState(recipe.servings);
-    const [tags, setTags] = useState<string[]>(recipe.tags.filter(t => t !== 'Perso')); // Remove auto-added tags
-    const [tagInput, setTagInput] = useState("");
-    const [showTagInput, setShowTagInput] = useState(false);
 
     const UNIT_OPTIONS = ["(vide)", "g", "kg", "ml", "cl", "L", "c.à.s", "c.à.c", "pincée", "verre", "tasse"];
 
@@ -61,16 +57,6 @@ const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags }: RecipeEditF
         setSteps(steps.filter((_, i) => i !== index));
     };
 
-    const handleAddTag = () => {
-        if (tagInput.trim()) {
-            setTags([...tags, tagInput.trim()]);
-            setTagInput("");
-        }
-    };
-
-    const handleRemoveTag = (tagToRemove: string) => {
-        setTags(tags.filter(t => t !== tagToRemove));
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -93,7 +79,6 @@ const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags }: RecipeEditF
             prepTime: prepTime || "10 min",
             cookTime: cookTime || "15 min",
             servings,
-            tags: recipe.isCustom ? [...tags, "Perso"] : tags
         };
 
         onSave(updatedRecipe);
@@ -189,60 +174,6 @@ const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags }: RecipeEditF
                     <button type="button" className="add-btn" onClick={handleAddStep}>+ Ajouter une étape</button>
                 </div>
 
-                <div className="form-section">
-                    <label className="form-label">Tags</label>
-
-                    <div className="tags-selection-list" style={{ marginBottom: '15px' }}>
-                        {availableTags.map((tag: string) => (
-                            <button
-                                key={tag}
-                                type="button"
-                                className={`filter-pill ${tags.includes(tag) ? 'active' : ''}`}
-                                onClick={() => {
-                                    if (tags.includes(tag)) {
-                                        setTags(tags.filter(t => t !== tag));
-                                    } else {
-                                        setTags([...tags, tag]);
-                                    }
-                                }}
-                                style={{ margin: '0 5px 5px 0', fontSize: '0.9rem' }}
-                            >
-                                {tag}
-                            </button>
-                        ))}
-                    </div>
-
-                    {!showTagInput ? (
-                        <button
-                            type="button"
-                            className="add-tag-toggle-btn"
-                            onClick={() => setShowTagInput(true)}
-                        >
-                            <span>+</span> Ajouter un nouveau tag
-                        </button>
-                    ) : (
-                        <div className="tag-input-wrapper fade-in">
-                            <input
-                                type="text"
-                                className="form-input"
-                                placeholder="Nouveau tag..."
-                                value={tagInput}
-                                onChange={e => setTagInput(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
-                                autoFocus
-                            />
-                            <button type="button" className="add-tag-btn" onClick={handleAddTag}>OK</button>
-                        </div>
-                    )}
-
-                    <div className="tags-preview">
-                        {tags.map(t => (
-                            <span key={t} className="preview-tag">
-                                {t} <button type="button" onClick={() => handleRemoveTag(t)}>×</button>
-                            </span>
-                        ))}
-                    </div>
-                </div>
 
                 <button type="submit" className="submit-btn">ENREGISTRER LES MODIFICATIONS ✨</button>
 

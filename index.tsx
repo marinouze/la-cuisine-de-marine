@@ -33,7 +33,6 @@ interface Recipe {
   prepTime: string;
   cookTime: string;
   servings: number;
-  tags: string[];
   isCustom?: boolean;
   comments?: Comment[];
 }
@@ -69,25 +68,6 @@ const SearchBar = ({ value, onChange }: SearchBarProps) => (
   </div>
 );
 
-interface FilterPillsProps {
-  allTags: string[];
-  selectedTags: string[];
-  onToggleTag: (tag: string) => void;
-}
-
-const FilterPills = ({ allTags, selectedTags, onToggleTag }: FilterPillsProps) => (
-  <div className="filter-pills-container">
-    {allTags.map((tag: string) => (
-      <button
-        key={tag}
-        className={`filter-pill ${selectedTags.includes(tag) ? 'active' : ''}`}
-        onClick={() => onToggleTag(tag)}
-      >
-        {tag}
-      </button>
-    ))}
-  </div>
-);
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -109,11 +89,6 @@ const RecipeCard = ({ recipe, onClick, isYummed, onToggleYum }: RecipeCardProps)
           <span>⏱️ {recipe.prepTime}</span>
           <span>🔥 {recipe.cookTime}</span>
           {Number(rating) > 0 && <span>⭐ {rating}</span>}
-        </div>
-        <div className="recipe-card-tags">
-          {recipe.tags.map(tag => (
-            <span key={tag} className="card-tag">{tag}</span>
-          ))}
         </div>
       </div>
       <div className="recipe-card-actions">
@@ -218,12 +193,6 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }: R
             Note moyenne : ⭐ {avgRating} / 5
           </div>
         )}
-
-        <div className="detail-tags">
-          {recipe.tags.map(tag => (
-            <span key={tag} className="detail-tag">{tag}</span>
-          ))}
-        </div>
       </div>
 
       <div className="detail-content">
@@ -316,17 +285,13 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }: R
 interface AddRecipeFormProps {
   onSave: (recipe: Recipe) => void;
   onCancel: () => void;
-  availableTags: string[];
 }
 
-const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) => {
+const AddRecipeForm = ({ onSave, onCancel }: AddRecipeFormProps) => {
   const [title, setTitle] = useState("");
   const [prepTime, setPrepTime] = useState("");
   const [cookTime, setCookTime] = useState("");
   const [servings, setServings] = useState(2);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [showTagInput, setShowTagInput] = useState(false);
 
   const UNIT_OPTIONS = ["(vide)", "g", "kg", "ml", "cl", "L", "c.à.s", "c.à.c", "pincée", "verre", "tasse"];
 
@@ -364,16 +329,6 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) 
     setSteps(steps.filter((_, i) => i !== index));
   };
 
-  const handleAddTag = () => {
-    if (tagInput.trim()) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput("");
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(t => t !== tagToRemove));
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -396,7 +351,6 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) 
       prepTime: prepTime || "10 min",
       cookTime: cookTime || "15 min",
       servings,
-      tags: [...tags, "Perso"],
       isCustom: true,
       comments: []
     };
@@ -492,60 +446,6 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) 
           <button type="button" className="add-btn" onClick={handleAddStep}>+ Ajouter une étape</button>
         </div>
 
-        <div className="form-section">
-          <label className="form-label">Tags</label>
-
-          <div className="tags-selection-list" style={{ marginBottom: '15px' }}>
-            {availableTags.map((tag: string) => (
-              <button
-                key={tag}
-                type="button"
-                className={`filter-pill ${tags.includes(tag) ? 'active' : ''}`}
-                onClick={() => {
-                  if (tags.includes(tag)) {
-                    setTags(tags.filter(t => t !== tag));
-                  } else {
-                    setTags([...tags, tag]);
-                  }
-                }}
-                style={{ margin: '0 5px 5px 0', fontSize: '0.9rem' }}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-
-          {!showTagInput ? (
-            <button
-              type="button"
-              className="add-tag-toggle-btn"
-              onClick={() => setShowTagInput(true)}
-            >
-              <span>+</span> Ajouter un nouveau tag
-            </button>
-          ) : (
-            <div className="tag-input-wrapper fade-in">
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Nouveau tag..."
-                value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
-                autoFocus
-              />
-              <button type="button" className="add-tag-btn" onClick={handleAddTag}>OK</button>
-            </div>
-          )}
-
-          <div className="tags-preview">
-            {tags.map(t => (
-              <span key={t} className="preview-tag">
-                {t} <button type="button" onClick={() => handleRemoveTag(t)}>×</button>
-              </span>
-            ))}
-          </div>
-        </div>
 
         <button type="submit" className="submit-btn">ENREGISTRER LA RECETTE ✨</button>
 
@@ -597,20 +497,6 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
   }
 }
 
-// Fetch all tags from Supabase
-async function fetchTagsFromDB(): Promise<string[]> {
-  try {
-    const { data, error } = await supabase
-      .from('tags')
-      .select('name')
-      .order('name');
-    if (error) throw error;
-    return data ? data.map(t => t.name) : [];
-  } catch (error) {
-    console.error('Error fetching tags:', error);
-    return [];
-  }
-}
 
 // Save a new recipe to Supabase
 async function saveRecipeToDB(recipe: Omit<Recipe, 'id' | 'comments'>): Promise<Recipe | null> {
@@ -670,9 +556,6 @@ const App = () => {
   const [yums, setYums] = useState<number[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom'>('all'); // 'all', 'yums', 'custom'
 
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
   // Fetch recipes from Supabase on mount
   useEffect(() => {
     async function loadRecipes() {
@@ -691,14 +574,6 @@ const App = () => {
     loadRecipes();
   }, []);
 
-  // Fetch tags from Supabase on mount
-  useEffect(() => {
-    async function loadTags() {
-      const tags = await fetchTagsFromDB();
-      setAvailableTags(tags);
-    }
-    loadTags();
-  }, []);
 
   const toggleYum = (id: number) => {
     setYums(prev =>
@@ -706,24 +581,8 @@ const App = () => {
     );
   };
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  };
 
   const handleSaveRecipe = async (newRecipe: Recipe) => {
-    // Check for new tags and add them to DB
-    const newTags = newRecipe.tags.filter(t => !availableTags.includes(t) && t !== 'Perso');
-    if (newTags.length > 0) {
-      for (const tag of newTags) {
-        // Insert into DB
-        await supabase.from('tags').insert({ name: tag }).select();
-      }
-      // Refresh available tags
-      setAvailableTags(prev => [...prev, ...newTags].sort());
-    }
-
     const savedRecipe = await saveRecipeToDB(newRecipe);
     if (savedRecipe) {
       setAllRecipes([savedRecipe, ...allRecipes]);
@@ -748,8 +607,6 @@ const App = () => {
     }
   };
 
-  // Use availableTags from DB instead of deriving from recipes
-  const allTags = availableTags;
 
   const filteredRecipes = allRecipes.filter(r => {
     const matchesSearch =
@@ -760,10 +617,7 @@ const App = () => {
     if (filterType === 'yums') matchesFilter = yums.includes(r.id);
     if (filterType === 'custom') matchesFilter = !!r.isCustom;
 
-    // Recipe must contain ALL selected tags
-    const matchesTags = selectedTags.length === 0 || selectedTags.every(tag => r.tags.includes(tag));
-
-    return matchesSearch && matchesFilter && matchesTags;
+    return matchesSearch && matchesFilter;
   });
 
   const selectedRecipe = allRecipes.find(r => r.id === selectedRecipeId);
@@ -807,7 +661,7 @@ const App = () => {
       {!isLoading && !error && (
         <>
           {isAddMode ? (
-            <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} availableTags={allTags} />
+            <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} />
           ) : !selectedRecipe ? (
             <div className="list-view fade-in">
               <header className="main-header">
@@ -816,12 +670,6 @@ const App = () => {
               </header>
 
               <SearchBar value={searchTerm} onChange={setSearchTerm} />
-
-              <FilterPills
-                allTags={allTags}
-                selectedTags={selectedTags}
-                onToggleTag={toggleTag}
-              />
 
               <div className="filter-tabs">
                 <button

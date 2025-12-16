@@ -1,24 +1,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { dbRecipeToRecipe, recipeToDbRecipeForUpdate, type Recipe, type DbRecipe, type Tag } from '../types';
+import { dbRecipeToRecipe, recipeToDbRecipeForUpdate, type Recipe, type DbRecipe } from '../types';
 import RecipeEditForm from '../components/RecipeEditForm';
 
 const BackOffice = () => {
-    const [activeTab, setActiveTab] = useState<'recipes' | 'tags'>('recipes');
+    const [activeTab, setActiveTab] = useState<'recipes'>('recipes');
     const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [tags, setTags] = useState<Tag[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     // Recipe Editing State
     const [editMode, setEditMode] = useState<'list' | 'edit'>('list');
     const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
-    const [availableTags, setAvailableTags] = useState<string[]>([]);
-
-    // Tag Editing State
-    const [newTagName, setNewTagName] = useState('');
-    const [editingTag, setEditingTag] = useState<Tag | null>(null);
 
     useEffect(() => {
         checkUser();
@@ -34,7 +28,7 @@ const BackOffice = () => {
 
     const fetchData = async () => {
         setLoading(true);
-        await Promise.all([fetchRecipes(), fetchTags()]);
+        await fetchRecipes();
         setLoading(false);
     };
 
@@ -50,18 +44,7 @@ const BackOffice = () => {
         }
     };
 
-    const fetchTags = async () => {
-        const { data } = await supabase
-            .from('tags')
-            .select('*')
-            .order('name');
 
-        if (data) {
-            setTags(data as Tag[]);
-            // Also populate availableTags for the edit form
-            setAvailableTags(data.map(t => t.name));
-        }
-    };
 
     // --- Recipe Actions ---
 
@@ -92,17 +75,6 @@ const BackOffice = () => {
     };
 
     const updateRecipe = async (updatedRecipe: Recipe) => {
-        // Check for new tags and add them to DB (same logic as handleSaveRecipe in index.tsx)
-        const newTags = updatedRecipe.tags.filter(t => !availableTags.includes(t) && t !== 'Perso');
-        if (newTags.length > 0) {
-            for (const tag of newTags) {
-                // Insert into DB
-                await supabase.from('tags').insert({ name: tag }).select();
-            }
-            // Refresh available tags
-            setAvailableTags(prev => [...prev, ...newTags].sort());
-        }
-
         const dbRecipe = recipeToDbRecipeForUpdate(updatedRecipe);
 
         const { error } = await supabase
@@ -132,50 +104,7 @@ const BackOffice = () => {
         setEditingRecipe(null);
     };
 
-    // --- Tag Actions ---
 
-    const handleAddTag = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newTagName.trim()) return;
-
-        const { data, error } = await supabase
-            .from('tags')
-            .insert([{ name: newTagName.trim() }])
-            .select()
-            .single();
-
-        if (!error && data) {
-            setTags([...tags, data as Tag]);
-            setNewTagName('');
-        } else {
-            alert('Erreur: ' + (error?.message || 'Inconnue'));
-        }
-    };
-
-    const updateTag = async (tag: Tag, newName: string) => {
-        const { error } = await supabase
-            .from('tags')
-            .update({ name: newName })
-            .eq('id', tag.id);
-
-        if (!error) {
-            setTags(tags.map(t => t.id === tag.id ? { ...t, name: newName } : t));
-            setEditingTag(null);
-        } else {
-            alert('Erreur: ' + error.message);
-        }
-    };
-
-    const deleteTag = async (id: number) => {
-        if (confirm('Supprimer ce tag ?')) {
-            const { error } = await supabase.from('tags').delete().eq('id', id);
-            if (!error) {
-                setTags(tags.filter(t => t.id !== id));
-            } else {
-                alert('Erreur (peut-être utilisé ?): ' + error.message);
-            }
-        }
-    };
 
     if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Chargement...</div>;
 
@@ -196,26 +125,12 @@ const BackOffice = () => {
                         border: 'none',
                         fontWeight: 'bold',
                         background: 'none',
-                        color: activeTab === 'recipes' ? 'var(--primary-color)' : '#999',
-                        borderBottom: activeTab === 'recipes' ? '2px solid var(--primary-color)' : 'none',
+                        color: 'var(--primary-color)',
+                        borderBottom: '2px solid var(--primary-color)',
                         cursor: 'pointer'
                     }}
                 >
                     Recettes ({recipes.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab('tags')}
-                    style={{
-                        padding: '10px 20px',
-                        border: 'none',
-                        fontWeight: 'bold',
-                        background: 'none',
-                        color: activeTab === 'tags' ? 'var(--primary-color)' : '#999',
-                        borderBottom: activeTab === 'tags' ? '2px solid var(--primary-color)' : 'none',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Tags ({tags.length})
                 </button>
             </div>
 
@@ -295,58 +210,8 @@ const BackOffice = () => {
                             recipe={editingRecipe}
                             onSave={updateRecipe}
                             onCancel={cancelEditing}
-                            availableTags={availableTags}
                         />
                     )}
-                </div>
-            )}
-
-            {activeTab === 'tags' && (
-                <div className="tags-manager">
-                    <form onSubmit={handleAddTag} style={{ marginBottom: '30px', display: 'flex', gap: '10px' }}>
-                        <input
-                            type="text"
-                            value={newTagName}
-                            onChange={e => setNewTagName(e.target.value)}
-                            placeholder="Nouveau tag..."
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', minWidth: '300px' }}
-                        />
-                        <button type="submit" disabled={!newTagName} className="submit-btn" style={{ width: 'auto' }}>Ajouter</button>
-                    </form>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
-                        {tags.map(tag => (
-                            <div key={tag.id} style={{
-                                background: 'white',
-                                padding: '10px 15px',
-                                borderRadius: '8px',
-                                border: '1px solid #eee',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                            }}>
-                                {editingTag?.id === tag.id ? (
-                                    <input
-                                        autoFocus
-                                        defaultValue={tag.name}
-                                        onBlur={(e) => updateTag(tag, e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') updateTag(tag, e.currentTarget.value);
-                                            if (e.key === 'Escape') setEditingTag(null);
-                                        }}
-                                        style={{ padding: '5px', width: '100%' }}
-                                    />
-                                ) : (
-                                    <span style={{ fontWeight: 600, color: '#555' }}>{tag.name}</span>
-                                )}
-
-                                <div style={{ display: 'flex', gap: '5px' }}>
-                                    <button onClick={() => setEditingTag(tag)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>✏️</button>
-                                    <button onClick={() => deleteTag(tag.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>🗑️</button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             )}
         </div>
