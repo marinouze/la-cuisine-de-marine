@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { supabase } from './src/supabaseClient';
@@ -6,6 +6,7 @@ import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import BackOffice from './src/pages/BackOffice';
 import Login from './src/pages/Login';
+import { getIngredientEmoji } from './src/utils/ingredientEmoji';
 
 // --- Types ---
 interface Ingredient {
@@ -48,7 +49,12 @@ const calculateAverageRating = (comments?: Comment[]) => {
 
 // --- Components ---
 
-const SearchBar: React.FC<{ value: string, onChange: (v: string) => void }> = ({ value, onChange }) => (
+interface SearchBarProps {
+  value: string;
+  onChange: (v: string) => void;
+}
+
+const SearchBar = ({ value, onChange }: SearchBarProps) => (
   <div className="search-wrapper">
     <div className="search-container">
       <span className="search-icon">🔍</span>
@@ -63,13 +69,15 @@ const SearchBar: React.FC<{ value: string, onChange: (v: string) => void }> = ({
   </div>
 );
 
-const FilterPills: React.FC<{
-  allTags: string[],
-  selectedTags: string[],
-  onToggleTag: (tag: string) => void
-}> = ({ allTags, selectedTags, onToggleTag }) => (
+interface FilterPillsProps {
+  allTags: string[];
+  selectedTags: string[];
+  onToggleTag: (tag: string) => void;
+}
+
+const FilterPills = ({ allTags, selectedTags, onToggleTag }: FilterPillsProps) => (
   <div className="filter-pills-container">
-    {allTags.map(tag => (
+    {allTags.map((tag: string) => (
       <button
         key={tag}
         className={`filter-pill ${selectedTags.includes(tag) ? 'active' : ''}`}
@@ -88,7 +96,7 @@ interface RecipeCardProps {
   onToggleYum: (id: number) => void;
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick, isYummed, onToggleYum }) => {
+const RecipeCard = ({ recipe, onClick, isYummed, onToggleYum }: RecipeCardProps) => {
   const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recipe.imagePrompt)}?width=120&height=120&nologo=true`;
   const rating = calculateAverageRating(recipe.comments);
 
@@ -126,7 +134,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick, isYummed, onTo
 
 // --- Recipe Detail Components ---
 
-const StarRating: React.FC<{ rating: number, setRating: (r: number) => void, readOnly?: boolean }> = ({ rating, setRating, readOnly = false }) => {
+interface StarRatingProps {
+  rating: number;
+  setRating: (r: number) => void;
+  readOnly?: boolean;
+}
+
+const StarRating = ({ rating, setRating, readOnly = false }: StarRatingProps) => {
   return (
     <div className={`star-rating ${readOnly ? 'readonly' : ''}`}>
       {[1, 2, 3, 4, 5].map((star) => (
@@ -150,7 +164,7 @@ interface RecipeDetailProps {
   onAddComment: (recipeId: number, comment: Omit<Comment, 'id'>) => void;
 }
 
-const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }) => {
+const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }: RecipeDetailProps) => {
   const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recipe.imagePrompt)}?width=800&height=500&nologo=true`;
   const [newCommentName, setNewCommentName] = useState("");
   const [newCommentText, setNewCommentText] = useState("");
@@ -216,7 +230,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, o
         <section className="section-ingredients">
           <h3 className="section-title">Ingrédients</h3>
           <ul className="ingredients-grid">
-            {recipe.ingredients.map((ing, idx) => (
+            {recipe.ingredients.map((ing: Ingredient, idx: number) => (
               <li key={idx} className="ingredient-item">
                 <span className="ingredient-emoji">{ing.emoji}</span>
                 <span className="ingredient-text">
@@ -232,7 +246,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, o
         <section className="section-steps">
           <h3 className="section-title">Préparation</h3>
           <ol className="steps-list">
-            {recipe.steps.map((step, idx) => (
+            {recipe.steps.map((step: string, idx: number) => (
               <li key={idx}>
                 <span className="step-number">{idx + 1}</span>
                 <p className="step-text">{step}</p>
@@ -247,7 +261,7 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, o
 
           <div className="comments-list">
             {recipe.comments && recipe.comments.length > 0 ? (
-              recipe.comments.map(comment => (
+              recipe.comments.map((comment: Comment) => (
                 <div key={comment.id} className="comment-bubble">
                   <div className="comment-header">
                     <span className="comment-user">{comment.user}</span>
@@ -297,89 +311,6 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, o
   );
 };
 
-// --- Helper: Auto-select emoji based on ingredient name ---
-const getIngredientEmoji = (ingredientName: string): string => {
-  const name = ingredientName.toLowerCase().trim();
-
-  // Viandes
-  if (name.includes('poulet') || name.includes('volaille')) return '🍗';
-  if (name.includes('bœuf') || name.includes('boeuf') || name.includes('steak')) return '🥩';
-  if (name.includes('porc') || name.includes('jambon') || name.includes('lard')) return '🥓';
-  if (name.includes('agneau')) return '🐑';
-
-  // Poissons et fruits de mer
-  if (name.includes('poisson') || name.includes('saumon') || name.includes('truite')) return '🐟';
-  if (name.includes('crevette')) return '🦐';
-  if (name.includes('crabe')) return '🦀';
-  if (name.includes('homard')) return '🦞';
-  if (name.includes('moule') || name.includes('huître')) return '🦪';
-
-  // Légumes
-  if (name.includes('tomate')) return '🍅';
-  if (name.includes('carotte')) return '🥕';
-  if (name.includes('brocoli')) return '🥦';
-  if (name.includes('aubergine')) return '🍆';
-  if (name.includes('poivron') || name.includes('piment')) return '🌶️';
-  if (name.includes('maïs')) return '🌽';
-  if (name.includes('champignon')) return '🍄';
-  if (name.includes('pomme de terre') || name.includes('patate')) return '🥔';
-  if (name.includes('concombre')) return '🥒';
-  if (name.includes('laitue') || name.includes('salade')) return '🥬';
-  if (name.includes('avocat')) return '🥑';
-  if (name.includes('oignon')) return '🧅';
-  if (name.includes('ail')) return '🧄';
-
-  // Fruits
-  if (name.includes('pomme')) return '🍎';
-  if (name.includes('banane')) return '🍌';
-  if (name.includes('orange') || name.includes('clémentine')) return '🍊';
-  if (name.includes('citron')) return '🍋';
-  if (name.includes('fraise')) return '🍓';
-  if (name.includes('raisin')) return '🍇';
-  if (name.includes('pastèque') || name.includes('melon')) return '🍉';
-  if (name.includes('pêche') || name.includes('abricot')) return '🍑';
-  if (name.includes('cerise')) return '🍒';
-  if (name.includes('ananas')) return '🍍';
-  if (name.includes('kiwi')) return '🥝';
-  if (name.includes('mangue')) return '🥭';
-
-  // Produits laitiers
-  if (name.includes('lait')) return '🥛';
-  if (name.includes('fromage')) return '🧀';
-  if (name.includes('beurre')) return '🧈';
-  if (name.includes('yaourt') || name.includes('yogourt')) return '🥛';
-  if (name.includes('crème')) return '🥛';
-
-  // Œufs
-  if (name.includes('œuf') || name.includes('oeuf')) return '🥚';
-
-  // Pains et céréales
-  if (name.includes('pain')) return '🍞';
-  if (name.includes('riz')) return '🍚';
-  if (name.includes('pâtes') || name.includes('pates') || name.includes('spaghetti') || name.includes('macaroni')) return '🍝';
-  if (name.includes('farine')) return '🌾';
-  if (name.includes('croissant')) return '🥐';
-
-  // Condiments et épices
-  if (name.includes('sel')) return '🧂';
-  if (name.includes('sucre')) return '🍬';
-  if (name.includes('miel')) return '🍯';
-  if (name.includes('huile')) return '🫗';
-
-  // Noix
-  if (name.includes('cacahuète') || name.includes('cacahouète') || name.includes('arachide')) return '🥜';
-  if (name.includes('noix') || name.includes('noisette') || name.includes('amande')) return '🌰';
-
-  // Boissons
-  if (name.includes('vin')) return '🍷';
-  if (name.includes('bière')) return '🍺';
-  if (name.includes('café')) return '☕';
-  if (name.includes('thé')) return '🍵';
-
-  // Default
-  return '🥘';
-};
-
 // --- Add Recipe Form Component ---
 
 interface AddRecipeFormProps {
@@ -388,7 +319,7 @@ interface AddRecipeFormProps {
   availableTags: string[];
 }
 
-const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel, availableTags }) => {
+const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) => {
   const [title, setTitle] = useState("");
   const [prepTime, setPrepTime] = useState("");
   const [cookTime, setCookTime] = useState("");
@@ -565,7 +496,7 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel, availab
           <label className="form-label">Tags</label>
 
           <div className="tags-selection-list" style={{ marginBottom: '15px' }}>
-            {availableTags.map(tag => (
+            {availableTags.map((tag: string) => (
               <button
                 key={tag}
                 type="button"
@@ -666,6 +597,21 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
   }
 }
 
+// Fetch all tags from Supabase
+async function fetchTagsFromDB(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('name')
+      .order('name');
+    if (error) throw error;
+    return data ? data.map(t => t.name) : [];
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+}
+
 // Save a new recipe to Supabase
 async function saveRecipeToDB(recipe: Omit<Recipe, 'id' | 'comments'>): Promise<Recipe | null> {
   try {
@@ -724,6 +670,7 @@ const App = () => {
   const [yums, setYums] = useState<number[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom'>('all'); // 'all', 'yums', 'custom'
 
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Fetch recipes from Supabase on mount
@@ -744,6 +691,15 @@ const App = () => {
     loadRecipes();
   }, []);
 
+  // Fetch tags from Supabase on mount
+  useEffect(() => {
+    async function loadTags() {
+      const tags = await fetchTagsFromDB();
+      setAvailableTags(tags);
+    }
+    loadTags();
+  }, []);
+
   const toggleYum = (id: number) => {
     setYums(prev =>
       prev.includes(id) ? prev.filter(y => y !== id) : [...prev, id]
@@ -757,6 +713,17 @@ const App = () => {
   };
 
   const handleSaveRecipe = async (newRecipe: Recipe) => {
+    // Check for new tags and add them to DB
+    const newTags = newRecipe.tags.filter(t => !availableTags.includes(t) && t !== 'Perso');
+    if (newTags.length > 0) {
+      for (const tag of newTags) {
+        // Insert into DB
+        await supabase.from('tags').insert({ name: tag }).select();
+      }
+      // Refresh available tags
+      setAvailableTags(prev => [...prev, ...newTags].sort());
+    }
+
     const savedRecipe = await saveRecipeToDB(newRecipe);
     if (savedRecipe) {
       setAllRecipes([savedRecipe, ...allRecipes]);
@@ -781,8 +748,8 @@ const App = () => {
     }
   };
 
-  // Extract all unique tags
-  const allTags = Array.from(new Set(allRecipes.flatMap(r => r.tags))).sort();
+  // Use availableTags from DB instead of deriving from recipes
+  const allTags = availableTags;
 
   const filteredRecipes = allRecipes.filter(r => {
     const matchesSearch =

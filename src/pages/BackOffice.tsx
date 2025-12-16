@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { dbRecipeToRecipe, recipeToDbRecipe, type Recipe, type DbRecipe, type Tag, type DbTag } from '../types';
+import { dbRecipeToRecipe, type Recipe, type DbRecipe, type Tag } from '../types';
 
-const BackOffice: React.FC = () => {
+const BackOffice = () => {
     const [activeTab, setActiveTab] = useState<'recipes' | 'tags'>('recipes');
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [tags, setTags] = useState<Tag[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-
-    // Recipe Editing State
-    const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
 
     // Tag Editing State
     const [newTagName, setNewTagName] = useState('');
