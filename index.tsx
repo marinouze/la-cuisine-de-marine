@@ -547,13 +547,12 @@ async function saveTagToDB(tagName: string, createdBy?: string): Promise<boolean
   try {
     const { error } = await supabase
       .from('tags')
-      .insert([{ name: tagName, created_by: createdBy || 'user' }]);
+      .upsert(
+        { name: tagName, created_by: createdBy || 'user' },
+        { onConflict: 'name', ignoreDuplicates: true }
+      );
 
     if (error) {
-      // Tag might already exist (unique constraint)
-      if (error.code === '23505') {
-        return true; // Tag already exists, that's fine
-      }
       throw error;
     }
     return true;

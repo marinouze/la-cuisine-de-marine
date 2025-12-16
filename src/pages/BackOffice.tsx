@@ -107,7 +107,10 @@ const BackOffice = () => {
                     try {
                         await supabase
                             .from('tags')
-                            .insert([{ name: tagName, created_by: 'admin' }])
+                            .upsert(
+                                { name: tagName, created_by: 'admin' },
+                                { onConflict: 'name', ignoreDuplicates: true }
+                            )
                             .select()
                             .single();
                     } catch {
