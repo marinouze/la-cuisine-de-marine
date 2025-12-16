@@ -107,6 +107,22 @@ export function recipeToDbRecipe(recipe: Omit<Recipe, 'id' | 'comments'>): Omit<
     };
 }
 
+// For updating an existing recipe (includes ID)
+export function recipeToDbRecipeForUpdate(recipe: Recipe): Partial<DbRecipe> {
+    return {
+        title: recipe.title,
+        image_prompt: recipe.imagePrompt,
+        ingredients: recipe.ingredients,
+        steps: recipe.steps,
+        prep_time: recipe.prepTime,
+        cook_time: recipe.cookTime,
+        servings: recipe.servings,
+        tags: recipe.tags,
+        is_custom: recipe.isCustom || false,
+        status: recipe.status || 'draft'
+    };
+}
+
 export function dbCommentToComment(dbComment: DbComment): Comment {
     return {
         id: dbComment.id,

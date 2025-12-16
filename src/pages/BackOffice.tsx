@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { dbRecipeToRecipe, type Recipe, type DbRecipe, type Tag } from '../types';
+import { dbRecipeToRecipe, recipeToDbRecipeForUpdate, type Recipe, type DbRecipe, type Tag } from '../types';
+import RecipeEditForm from '../components/RecipeEditForm';
 
 const BackOffice = () => {
     const [activeTab, setActiveTab] = useState<'recipes' | 'tags'>('recipes');
@@ -9,6 +10,11 @@ const BackOffice = () => {
     const [tags, setTags] = useState<Tag[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+
+    // Recipe Editing State
+    const [editMode, setEditMode] = useState<'list' | 'edit'>('list');
+    const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+    const [availableTags, setAvailableTags] = useState<string[]>([]);
 
     // Tag Editing State
     const [newTagName, setNewTagName] = useState('');
@@ -52,6 +58,8 @@ const BackOffice = () => {
 
         if (data) {
             setTags(data as Tag[]);
+            // Also populate availableTags for the edit form
+            setAvailableTags(data.map(t => t.name));
         }
     };
 
@@ -81,6 +89,36 @@ const BackOffice = () => {
                 alert('Erreur: ' + error.message);
             }
         }
+    };
+
+    const updateRecipe = async (updatedRecipe: Recipe) => {
+        const dbRecipe = recipeToDbRecipeForUpdate(updatedRecipe);
+
+        const { error } = await supabase
+            .from('recipes')
+            .update(dbRecipe)
+            .eq('id', updatedRecipe.id);
+
+        if (!error) {
+            // Update local state
+            setRecipes(recipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r));
+            // Return to list view
+            setEditMode('list');
+            setEditingRecipe(null);
+            alert('Recette mise à jour avec succès !');
+        } else {
+            alert('Erreur lors de la mise à jour: ' + error.message);
+        }
+    };
+
+    const startEditingRecipe = (recipe: Recipe) => {
+        setEditingRecipe(recipe);
+        setEditMode('edit');
+    };
+
+    const cancelEditing = () => {
+        setEditMode('list');
+        setEditingRecipe(null);
     };
 
     // --- Tag Actions ---
@@ -171,60 +209,84 @@ const BackOffice = () => {
             </div>
 
             {activeTab === 'recipes' && (
-                <div className="recipes-list">
-                    <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
-                        <thead style={{ background: '#f5f5f5' }}>
-                            <tr>
-                                <th style={{ padding: '15px', textAlign: 'left' }}>Titre</th>
-                                <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
-                                <th style={{ padding: '15px', textAlign: 'left' }}>Date</th>
-                                <th style={{ padding: '15px', textAlign: 'right' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {recipes.map(recipe => (
-                                <tr key={recipe.id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ padding: '15px', fontWeight: 'bold' }}>{recipe.title}</td>
-                                    <td style={{ padding: '15px' }}>
-                                        <span style={{
-                                            padding: '4px 8px',
-                                            borderRadius: '12px',
-                                            background: recipe.status === 'published' ? '#e8f5e9' : '#fff3e0',
-                                            color: recipe.status === 'published' ? '#2e7d32' : '#ef6c00',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 'bold'
-                                        }}>
-                                            {recipe.status === 'published' ? 'PUBLIÉ' : 'BROUILLON'}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '15px', fontSize: '0.9rem', color: '#666' }}>
-                                        {/* Just displaying ID as placeholder for date if not available in View Model yet */}
-                                        #{recipe.id}
-                                    </td>
-                                    <td style={{ padding: '15px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                        <button
-                                            onClick={() => toggleRecipeStatus(recipe)}
-                                            style={{
-                                                padding: '6px 12px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #ccc',
-                                                cursor: 'pointer',
-                                                background: 'white'
-                                            }}
-                                        >
-                                            {recipe.status === 'published' ? 'Dépublier' : 'Publier'}
-                                        </button>
-                                        <button
-                                            onClick={() => deleteRecipe(recipe.id)}
-                                            style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#ffebee', color: '#c62828', cursor: 'pointer' }}
-                                        >
-                                            Supprimer
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div>
+                    {editMode === 'list' ? (
+                        <div className="recipes-list">
+                            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
+                                <thead style={{ background: '#f5f5f5' }}>
+                                    <tr>
+                                        <th style={{ padding: '15px', textAlign: 'left' }}>Titre</th>
+                                        <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
+                                        <th style={{ padding: '15px', textAlign: 'left' }}>Date</th>
+                                        <th style={{ padding: '15px', textAlign: 'right' }}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recipes.map(recipe => (
+                                        <tr key={recipe.id} style={{ borderBottom: '1px solid #eee' }}>
+                                            <td style={{ padding: '15px', fontWeight: 'bold' }}>{recipe.title}</td>
+                                            <td style={{ padding: '15px' }}>
+                                                <span style={{
+                                                    padding: '4px 8px',
+                                                    borderRadius: '12px',
+                                                    background: recipe.status === 'published' ? '#e8f5e9' : '#fff3e0',
+                                                    color: recipe.status === 'published' ? '#2e7d32' : '#ef6c00',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    {recipe.status === 'published' ? 'PUBLIÉ' : 'BROUILLON'}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '15px', fontSize: '0.9rem', color: '#666' }}>
+                                                {/* Just displaying ID as placeholder for date if not available in View Model yet */}
+                                                #{recipe.id}
+                                            </td>
+                                            <td style={{ padding: '15px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                                <button
+                                                    onClick={() => toggleRecipeStatus(recipe)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid #ccc',
+                                                        cursor: 'pointer',
+                                                        background: 'white'
+                                                    }}
+                                                >
+                                                    {recipe.status === 'published' ? 'Dépublier' : 'Publier'}
+                                                </button>
+                                                <button
+                                                    onClick={() => startEditingRecipe(recipe)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid #ccc',
+                                                        cursor: 'pointer',
+                                                        background: '#e3f2fd',
+                                                        color: '#1976d2'
+                                                    }}
+                                                >
+                                                    Modifier
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteRecipe(recipe.id)}
+                                                    style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#ffebee', color: '#c62828', cursor: 'pointer' }}
+                                                >
+                                                    Supprimer
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : editingRecipe && (
+                        <RecipeEditForm
+                            recipe={editingRecipe}
+                            onSave={updateRecipe}
+                            onCancel={cancelEditing}
+                            availableTags={availableTags}
+                        />
+                    )}
                 </div>
             )}
 
