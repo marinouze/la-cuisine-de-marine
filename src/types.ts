@@ -10,8 +10,15 @@ export interface DbRecipe {
     servings: number;
     tags: string[];
     is_custom: boolean;
+    status: 'draft' | 'published';
     created_at?: string;
     updated_at?: string;
+}
+
+export interface DbTag {
+    id: number;
+    name: string;
+    created_at?: string;
 }
 
 export interface DbIngredient {
@@ -58,7 +65,13 @@ export interface Recipe {
     servings: number;
     tags: string[];
     isCustom?: boolean;
+    status?: 'draft' | 'published';
     comments?: Comment[];
+}
+
+export interface Tag {
+    id: number;
+    name: string;
 }
 
 // Transformation functions
@@ -74,6 +87,7 @@ export function dbRecipeToRecipe(dbRecipe: DbRecipe, comments: DbComment[] = [])
         servings: dbRecipe.servings,
         tags: dbRecipe.tags,
         isCustom: dbRecipe.is_custom,
+        status: dbRecipe.status,
         comments: comments.map(dbCommentToComment)
     };
 }
@@ -88,7 +102,8 @@ export function recipeToDbRecipe(recipe: Omit<Recipe, 'id' | 'comments'>): Omit<
         cook_time: recipe.cookTime,
         servings: recipe.servings,
         tags: recipe.tags,
-        is_custom: recipe.isCustom || false
+        is_custom: recipe.isCustom || false,
+        status: recipe.status || 'draft'
     };
 }
 

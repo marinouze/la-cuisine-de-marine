@@ -790,6 +790,32 @@
     font-size: 1.1rem;
 }
 
+.add-tag-toggle-btn {
+    background: transparent;
+    border: 2px dashed var(--accent-color);
+    color: var(--accent-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.add-tag-toggle-btn:hover {
+    background: rgba(69, 123, 157, 0.1);
+    transform: translateY(-1px);
+}
+
+.add-tag-toggle-btn:active {
+    transform: translateY(0);
+}
+
 .submit-btn {
     background: var(--primary-color);
     color: white;

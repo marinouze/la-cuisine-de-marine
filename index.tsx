@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 
 import { supabase } from './src/supabaseClient';
 import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, type DbComment } from './src/types';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import BackOffice from './src/pages/BackOffice';
+import Login from './src/pages/Login';
 
 // --- Types ---
 interface Ingredient {
@@ -382,15 +385,17 @@ const getIngredientEmoji = (ingredientName: string): string => {
 interface AddRecipeFormProps {
   onSave: (recipe: Recipe) => void;
   onCancel: () => void;
+  availableTags: string[];
 }
 
-const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel }) => {
+const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel, availableTags }) => {
   const [title, setTitle] = useState("");
   const [prepTime, setPrepTime] = useState("");
   const [cookTime, setCookTime] = useState("");
   const [servings, setServings] = useState(2);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [showTagInput, setShowTagInput] = useState(false);
 
   const UNIT_OPTIONS = ["(vide)", "g", "kg", "ml", "cl", "L", "c.à.s", "c.à.c", "pincée", "verre", "tasse"];
 
@@ -558,17 +563,50 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel }) => {
 
         <div className="form-section">
           <label className="form-label">Tags</label>
-          <div className="tag-input-wrapper">
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Ajouter un tag..."
-              value={tagInput}
-              onChange={e => setTagInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
-            />
-            <button type="button" className="add-tag-btn" onClick={handleAddTag}>OK</button>
+
+          <div className="tags-selection-list" style={{ marginBottom: '15px' }}>
+            {availableTags.map(tag => (
+              <button
+                key={tag}
+                type="button"
+                className={`filter-pill ${tags.includes(tag) ? 'active' : ''}`}
+                onClick={() => {
+                  if (tags.includes(tag)) {
+                    setTags(tags.filter(t => t !== tag));
+                  } else {
+                    setTags([...tags, tag]);
+                  }
+                }}
+                style={{ margin: '0 5px 5px 0', fontSize: '0.9rem' }}
+              >
+                {tag}
+              </button>
+            ))}
           </div>
+
+          {!showTagInput ? (
+            <button
+              type="button"
+              className="add-tag-toggle-btn"
+              onClick={() => setShowTagInput(true)}
+            >
+              <span>+</span> Ajouter un nouveau tag
+            </button>
+          ) : (
+            <div className="tag-input-wrapper fade-in">
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Nouveau tag..."
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+                autoFocus
+              />
+              <button type="button" className="add-tag-btn" onClick={handleAddTag}>OK</button>
+            </div>
+          )}
+
           <div className="tags-preview">
             {tags.map(t => (
               <span key={t} className="preview-tag">
@@ -597,6 +635,7 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
     const { data: recipesData, error: recipesError } = await supabase
       .from('recipes')
       .select('*')
+      .eq('status', 'published') // Only fetch published recipes for the main app
       .order('created_at', { ascending: false });
 
     if (recipesError) throw recipesError;
@@ -801,7 +840,7 @@ const App = () => {
       {!isLoading && !error && (
         <>
           {isAddMode ? (
-            <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} />
+            <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} availableTags={allTags} />
           ) : !selectedRecipe ? (
             <div className="list-view fade-in">
               <header className="main-header">
@@ -879,6 +918,16 @@ const App = () => {
   );
 };
 
+const RouterApp = () => (
+  <BrowserRouter>
+    <Routes>
+      <Route path="/" element={<App />} />
+      <Route path="/admindesrecettes" element={<BackOffice />} />
+      <Route path="/login" element={<Login />} />
+    </Routes>
+  </BrowserRouter>
+);
+
 const container = document.getElementById('root');
 const root = createRoot(container!);
-root.render(<App />);
+root.render(<RouterApp />);
