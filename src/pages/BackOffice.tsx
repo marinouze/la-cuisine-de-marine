@@ -100,8 +100,56 @@ const BackOffice = () => {
             .eq('id', updatedRecipe.id);
 
         if (!error) {
+            // Save tags if present
+            if (updatedRecipe.tags && updatedRecipe.tags.length > 0) {
+                // First ensure all tags exist
+                for (const tagName of updatedRecipe.tags) {
+                    try {
+                        await supabase
+                            .from('tags')
+                            .insert([{ name: tagName, created_by: 'admin' }])
+                            .select()
+                            .single();
+                    } catch {
+                        // Silently ignore conflicts (tag already exists)
+                    }
+                }
+
+                // Get tag IDs
+                const { data: tagData } = await supabase
+                    .from('tags')
+                    .select('id, name')
+                    .in('name', updatedRecipe.tags);
+
+                if (tagData) {
+                    // Delete existing recipe_tags
+                    await supabase
+                        .from('recipe_tags')
+                        .delete()
+                        .eq('recipe_id', updatedRecipe.id);
+
+                    // Insert new recipe_tags
+                    const recipeTagsToInsert = tagData.map(tag => ({
+                        recipe_id: updatedRecipe.id,
+                        tag_id: tag.id
+                    }));
+
+                    await supabase
+                        .from('recipe_tags')
+                        .insert(recipeTagsToInsert);
+                }
+            } else {
+                // If no tags, remove all existing associations
+                await supabase
+                    .from('recipe_tags')
+                    .delete()
+                    .eq('recipe_id', updatedRecipe.id);
+            }
+
             // Update local state
             setRecipes(recipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r));
+            // Refresh tags list in case new ones were added
+            await fetchTags();
             // Return to list view
             setEditMode('list');
             setEditingRecipe(null);
@@ -310,6 +358,7 @@ const BackOffice = () => {
                             recipe={editingRecipe}
                             onSave={updateRecipe}
                             onCancel={cancelEditing}
+                            availableTags={tags.map(t => t.name)}
                         />
                     )}
                 </div>

@@ -6,9 +6,10 @@ interface RecipeEditFormProps {
     recipe: Recipe;
     onSave: (recipe: Recipe) => void;
     onCancel: () => void;
+    availableTags?: string[];
 }
 
-const RecipeEditForm = ({ recipe, onSave, onCancel }: RecipeEditFormProps) => {
+const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags = [] }: RecipeEditFormProps) => {
     // Initialize state with existing recipe data
     const [title, setTitle] = useState(recipe.title);
     const [prepTime, setPrepTime] = useState(recipe.prepTime);
@@ -28,6 +29,11 @@ const RecipeEditForm = ({ recipe, onSave, onCancel }: RecipeEditFormProps) => {
 
     // Initialize steps from recipe
     const [steps, setSteps] = useState<string[]>(recipe.steps);
+
+    // Initialize tags from recipe
+    const [selectedTags, setSelectedTags] = useState<string[]>(recipe.tags || []);
+    const [showNewTagInput, setShowNewTagInput] = useState(false);
+    const [newTagName, setNewTagName] = useState('');
 
     const handleAddIngredient = () => {
         setIngredients([...ingredients, { qty: "", unit: "", name: "" }]);
@@ -57,6 +63,20 @@ const RecipeEditForm = ({ recipe, onSave, onCancel }: RecipeEditFormProps) => {
         setSteps(steps.filter((_, i) => i !== index));
     };
 
+    const handleToggleTag = (tag: string) => {
+        setSelectedTags(prev =>
+            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+        );
+    };
+
+    const handleAddNewTag = () => {
+        if (newTagName.trim() && !selectedTags.includes(newTagName.trim())) {
+            setSelectedTags(prev => [...prev, newTagName.trim()]);
+            setNewTagName('');
+            setShowNewTagInput(false);
+        }
+    };
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -79,6 +99,7 @@ const RecipeEditForm = ({ recipe, onSave, onCancel }: RecipeEditFormProps) => {
             prepTime: prepTime || "10 min",
             cookTime: cookTime || "15 min",
             servings,
+            tags: selectedTags,
         };
 
         onSave(updatedRecipe);
@@ -172,6 +193,59 @@ const RecipeEditForm = ({ recipe, onSave, onCancel }: RecipeEditFormProps) => {
                         </div>
                     ))}
                     <button type="button" className="add-btn" onClick={handleAddStep}>+ Ajouter une étape</button>
+                </div>
+
+                <div className="form-section">
+                    <label className="form-label">Tags</label>
+                    <div className="tag-checkbox-list">
+                        {availableTags.map(tag => (
+                            <label key={tag} className="tag-checkbox-item">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedTags.includes(tag)}
+                                    onChange={() => handleToggleTag(tag)}
+                                />
+                                <span>{tag}</span>
+                            </label>
+                        ))}
+                    </div>
+                    {!showNewTagInput ? (
+                        <button
+                            type="button"
+                            className="add-tag-btn"
+                            onClick={() => setShowNewTagInput(true)}
+                        >
+                            + Ajouter un tag
+                        </button>
+                    ) : (
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Nom du nouveau tag..."
+                                value={newTagName}
+                                onChange={(e) => setNewTagName(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNewTag())}
+                                autoFocus
+                            />
+                            <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={handleAddNewTag}
+                                style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
+                            >
+                                OK
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => { setShowNewTagInput(false); setNewTagName(''); }}
+                                style={{ padding: '8px 16px' }}
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    )}
                 </div>
 
 

@@ -144,6 +144,7 @@
     font-size: 0.85rem;
     color: #666;
     white-space: nowrap;
+    flex-shrink: 0;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -990,6 +991,7 @@
 .chat-send-btn:disabled {
     background: #ccc;
 }
+
 /* --- Tag-related Styles --- */
 
 /* Tag pills for display on cards and detail pages */
@@ -1087,6 +1089,7 @@
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }

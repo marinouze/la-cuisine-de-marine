@@ -326,15 +326,14 @@ interface TagSelectorProps {
 }
 
 const TagSelector = ({ availableTags, selectedTags, onToggleTag, onAddNewTag }: TagSelectorProps) => {
-  const [showNewTagModal, setShowNewTagModal] = useState(false);
+  const [showNewTagInput, setShowNewTagInput] = useState(false);
   const [newTagName, setNewTagName] = useState("");
 
-  const handleSubmitNewTag = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitNewTag = () => {
     if (newTagName.trim()) {
       onAddNewTag(newTagName.trim());
       setNewTagName("");
-      setShowNewTagModal(false);
+      setShowNewTagInput(false);
     }
   };
 
@@ -352,38 +351,42 @@ const TagSelector = ({ availableTags, selectedTags, onToggleTag, onAddNewTag }: 
           </label>
         ))}
       </div>
-      <button
-        type="button"
-        className="add-tag-btn"
-        onClick={() => setShowNewTagModal(true)}
-      >
-        + Ajouter un tag
-      </button>
 
-      {showNewTagModal && (
-        <div className="modal-overlay" onClick={() => setShowNewTagModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Créer un nouveau tag</h3>
-            <form onSubmit={handleSubmitNewTag}>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Nom du tag..."
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                autoFocus
-                required
-              />
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowNewTagModal(false)}>
-                  Annuler
-                </button>
-                <button type="submit" className="btn-primary">
-                  Créer
-                </button>
-              </div>
-            </form>
-          </div>
+      {!showNewTagInput ? (
+        <button
+          type="button"
+          className="add-tag-btn"
+          onClick={() => setShowNewTagInput(true)}
+        >
+          + Ajouter un tag
+        </button>
+      ) : (
+        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Nom du nouveau tag..."
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSubmitNewTag())}
+            autoFocus
+          />
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleSubmitNewTag}
+            style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
+          >
+            OK
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => { setShowNewTagInput(false); setNewTagName(''); }}
+            style={{ padding: '8px 16px' }}
+          >
+            Annuler
+          </button>
         </div>
       )}
     </div>
@@ -396,10 +399,9 @@ interface AddRecipeFormProps {
   onSave: (recipe: Recipe) => void;
   onCancel: () => void;
   availableTags: string[];
-  onTagsUpdate: () => void;
 }
 
-const AddRecipeForm = ({ onSave, onCancel, availableTags, onTagsUpdate }: AddRecipeFormProps) => {
+const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) => {
   const [title, setTitle] = useState("");
   const [prepTime, setPrepTime] = useState("");
   const [cookTime, setCookTime] = useState("");
@@ -450,14 +452,11 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags, onTagsUpdate }: AddRec
     );
   };
 
-  const handleAddNewTag = async (tagName: string) => {
-    // Add to selected tags immediately
+  const handleAddNewTag = (tagName: string) => {
+    // Add to selected tags immediately (will be saved when recipe is submitted)
     if (!selectedTags.includes(tagName)) {
       setSelectedTags(prev => [...prev, tagName]);
     }
-    // Save to database (will be called from parent to refresh available tags)
-    await saveTagToDB(tagName);
-    onTagsUpdate();
   };
 
 
@@ -674,21 +673,7 @@ async function linkTagsToRecipe(recipeId: number, tagNames: string[]): Promise<b
   }
 }
 
-// Fetch recipe tags from the junction table
-async function fetchRecipeTagsFromDB(recipeId: number): Promise<string[]> {
-  try {
-    const { data, error } = await supabase
-      .from('recipe_tags')
-      .select('tag_id, tags!inner(name)')
-      .eq('recipe_id', recipeId);
 
-    if (error) throw error;
-    return (data || []).map((rt: any) => rt.tags.name);
-  } catch (error) {
-    console.error('Error fetching recipe tags:', error);
-    return [];
-  }
-}
 
 // Fetch all recipes with their comments from Supabase
 async function fetchRecipesFromDB(): Promise<Recipe[]> {
@@ -712,7 +697,7 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
     if (commentsError) throw commentsError;
 
     // Group comments by recipe_id
-    const commentsByRecipe = new Map<number, DbComment>();
+    const commentsByRecipe = new Map<number, DbComment[]>();
     (commentsData || []).forEach(comment => {
       const existing = commentsByRecipe.get(comment.recipe_id) || [];
       commentsByRecipe.set(comment.recipe_id, [...existing, comment]);
@@ -853,10 +838,7 @@ const App = () => {
     );
   };
 
-  const refreshTags = async () => {
-    const tags = await fetchTagsFromDB();
-    setAllTags(tags);
-  };
+
 
 
   const handleSaveRecipe = async (newRecipe: Recipe) => {
@@ -948,7 +930,6 @@ const App = () => {
               onSave={handleSaveRecipe}
               onCancel={() => setIsAddMode(false)}
               availableTags={allTags}
-              onTagsUpdate={refreshTags}
             />
           ) : !selectedRecipe ? (
             <div className="list-view fade-in">
