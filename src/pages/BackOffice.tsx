@@ -110,9 +110,7 @@ const BackOffice = () => {
                             .upsert(
                                 { name: tagName, created_by: 'admin' },
                                 { onConflict: 'name', ignoreDuplicates: true }
-                            )
-                            .select()
-                            .single();
+                            );
                     } catch {
                         // Silently ignore conflicts (tag already exists)
                     }
