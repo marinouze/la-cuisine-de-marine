@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
+import { supabase } from './src/supabaseClient';
+import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, type DbComment } from './src/types';
 
 // --- Types ---
 interface Ingredient {
@@ -34,116 +36,6 @@ interface Message {
   role: 'user' | 'model';
   text: string;
 }
-
-// --- Data ---
-const initialRecipes: Recipe[] = [
-  {
-    id: 1,
-    title: "Riz aux Crevettes et à la Citronnelle",
-    imagePrompt: "Delicious shrimp and lemongrass rice dish gourmet food photography bright colors",
-    ingredients: [
-      { emoji: "🦐", text: "Crevettes crues x 20" },
-      { emoji: "🌿", text: "Citronnelle 2 tiges" },
-      { emoji: "🍚", text: "Riz thaï 2 verres (200g)" },
-      { emoji: "🍃", text: "Basilic 1 botte" },
-      { emoji: "🍛", text: "Curry 2 cuil. à soupe" },
-      { emoji: "🧂", text: "Sel, poivre" }
-    ],
-    steps: [
-      "Émincez finement la citronnelle et mélangez-la dans un saladier avec le riz, le curry, les crevettes, le basilic coupé aux ciseaux et 4 verres d'eau (40 cl).",
-      "Recouvrez d'un film étirable et faites cuire 13 min à 850 W au micro-ondes.",
-      "Salez, poivrez, mélangez et dégustez."
-    ],
-    prepTime: "2 min",
-    cookTime: "13 min",
-    servings: 4,
-    tags: ["Asiatique", "Simplissime", "Plat principal"],
-    comments: [
-      { id: 101, user: "Julie", rating: 5, text: "Incroyable ! Super rapide et délicieux.", date: "12 Oct" },
-      { id: 102, user: "Marc", rating: 4, text: "J'ai ajouté un peu de piment, c'était top.", date: "15 Oct" }
-    ]
-  },
-  {
-    id: 2,
-    title: "Poulet aux Noix de Cajou",
-    imagePrompt: "Chicken with cashew nuts asian style dish food photography gourmet",
-    ingredients: [
-      { emoji: "🍗", text: "Blancs de poulet x 4" },
-      { emoji: "🧅", text: "Oignon doux x 1" },
-      { emoji: "🥜", text: "Noix de cajou 200g" },
-      { emoji: "🍯", text: "Miel liquide 2 cuil. à soupe" },
-      { emoji: "🥢", text: "Sauce soja 4 cuil. à soupe" },
-      { emoji: "🌿", text: "Coriandre 1 botte" },
-      { emoji: "🫒", text: "Huile d'olive 3 cuil. à soupe" }
-    ],
-    steps: [
-      "Faites saisir les blancs de poulet coupés en morceaux dans une poêle avec 3 cuil. à soupe d'huile d'olive.",
-      "Ajoutez l'oignon haché, les noix de cajou, laissez roussir 5 min puis versez le miel et la sauce soja.",
-      "Faites cuire 5 min en remuant et ajoutez la coriandre coupée aux ciseaux."
-    ],
-    prepTime: "5 min",
-    cookTime: "12 min",
-    servings: 4,
-    tags: ["Poulet", "Simplissime", "Plat principal"],
-    comments: [
-      { id: 201, user: "Sophie", rating: 5, text: "Mon plat préféré du soir !", date: "02 Nov" }
-    ]
-  },
-  {
-    id: 3,
-    title: "Risotto aux Champignons",
-    imagePrompt: "Creamy mushroom risotto gourmet food photography top view",
-    ingredients: [
-      { emoji: "🧊", text: "1 Kub Or" },
-      { emoji: "🍚", text: "300g de riz rond" },
-      { emoji: "🌿", text: "2 branches de persil" },
-      { emoji: "🧄", text: "2 gousses d'ail" },
-      { emoji: "🧅", text: "2 échalotes moyennes" },
-      { emoji: "🥛", text: "1 pot de crème fraîche" },
-      { emoji: "🧀", text: "1/2 pot de mascarpone" },
-      { emoji: "🍄", text: "Champignons variés 200g" }
-    ],
-    steps: [
-      "Émincer oignons, persil & ail. Faire bouillir les champignons dans de l'eau un peu salée.",
-      "Une fois porté à ébullition, égoutter les champignons & réserver l'eau de cuisson.",
-      "Faire blondir échalotes, persil & ail dans de l'huile d'olive.",
-      "Ajouter la crème fraîche, remuer, rajouter les champignons, bien les imprégner puis ajouter le riz.",
-      "Bien faire revenir puis rajouter le mascarpone.",
-      "Faire revenir puis rajouter l'eau de cuisson pour recouvrir. Laisser mijoter en ajoutant de l'eau jusqu'à cuisson du riz.",
-      "Dans le dernier ajout d'eau, émietter le Kub Or."
-    ],
-    prepTime: "15 min",
-    cookTime: "25 min",
-    servings: 4,
-    tags: ["Réconfortant", "Recette perso", "Végétarien", "Plat principal"],
-    comments: []
-  },
-  {
-    id: 4,
-    title: "Blanquette poulet au potimarron",
-    imagePrompt: "Creamy chicken stew with pumpkin potimarron and tarragon gourmet food photography warm colors",
-    ingredients: [
-      { emoji: "🍗", text: "2 blancs de poulet" },
-      { emoji: "🎃", text: "1 petit potimarron" },
-      { emoji: "🌿", text: "1/2 botte d'estragon" },
-      { emoji: "🥛", text: "16 cl de crème liquide" }
-    ],
-    steps: [
-      "Laver, équeuter et découper le potimarron avec la peau en petits dés.",
-      "Couper le poulet en morceaux. Faire saisir 5 mn les blancs de poulet dans une sauteuse.",
-      "Ajouter les dés de potimarron, baisser le feu et laisser cuire à couvert environ 15 min jusqu'à tendreté.",
-      "Ajouter la crème liquide et l'estragon ciselé, mélanger et servir chaud."
-    ],
-    prepTime: "15 min",
-    cookTime: "20 min",
-    servings: 3,
-    tags: ["Poulet", "Automne", "Plat principal"],
-    comments: [
-      { id: 401, user: "Thomas", rating: 4, text: "Très bonne recette d'automne.", date: "20 Oct" },
-      { id: 402, user: "Léa", rating: 5, text: "L'estragon change tout !", date: "22 Oct" }
-    ]
-  }
-];
 
 // --- Helpers ---
 const calculateAverageRating = (comments?: Comment[]) => {
@@ -689,8 +581,97 @@ const AICoach: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
+// --- Database Helper Functions ---
+
+// Fetch all recipes with their comments from Supabase
+async function fetchRecipesFromDB(): Promise<Recipe[]> {
+  try {
+    // Fetch recipes
+    const { data: recipesData, error: recipesError } = await supabase
+      .from('recipes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (recipesError) throw recipesError;
+    if (!recipesData) return [];
+
+    // Fetch all comments
+    const { data: commentsData, error: commentsError } = await supabase
+      .from('comments')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (commentsError) throw commentsError;
+
+    // Group comments by recipe_id
+    const commentsByRecipe = new Map<number, DbComment[]>();
+    (commentsData || []).forEach(comment => {
+      const existing = commentsByRecipe.get(comment.recipe_id) || [];
+      commentsByRecipe.set(comment.recipe_id, [...existing, comment]);
+    });
+
+    // Transform to Recipe format
+    return recipesData.map(dbRecipe =>
+      dbRecipeToRecipe(dbRecipe as DbRecipe, commentsByRecipe.get(dbRecipe.id) || [])
+    );
+  } catch (error) {
+    console.error('Error fetching recipes:', error);
+    return [];
+  }
+}
+
+// Save a new recipe to Supabase
+async function saveRecipeToDB(recipe: Omit<Recipe, 'id' | 'comments'>): Promise<Recipe | null> {
+  try {
+    const dbRecipe = recipeToDbRecipe(recipe);
+
+    const { data, error } = await supabase
+      .from('recipes')
+      .insert([dbRecipe])
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return dbRecipeToRecipe(data as DbRecipe, []);
+  } catch (error) {
+    console.error('Error saving recipe:', error);
+    return null;
+  }
+}
+
+// Add a comment to a recipe in Supabase
+async function addCommentToDB(recipeId: number, comment: Omit<Comment, 'id'>): Promise<Comment | null> {
+  try {
+    const dbComment = commentToDbComment(comment, recipeId);
+
+    const { data, error } = await supabase
+      .from('comments')
+      .insert([dbComment])
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      user: data.user_name,
+      rating: data.rating,
+      text: data.text,
+      date: data.date
+    };
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    return null;
+  }
+}
+
 const App = () => {
-  const [allRecipes, setAllRecipes] = useState<Recipe[]>(initialRecipes);
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
   const [isAddMode, setIsAddMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -698,6 +679,24 @@ const App = () => {
   const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom'>('all'); // 'all', 'yums', 'custom'
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Fetch recipes from Supabase on mount
+  useEffect(() => {
+    async function loadRecipes() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const recipes = await fetchRecipesFromDB();
+        setAllRecipes(recipes);
+      } catch (err) {
+        console.error('Failed to load recipes:', err);
+        setError('Impossible de charger les recettes. Vérifiez votre connexion.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadRecipes();
+  }, []);
 
   const toggleYum = (id: number) => {
     setYums(prev =>
@@ -711,20 +710,29 @@ const App = () => {
     );
   };
 
-  const handleSaveRecipe = (newRecipe: Recipe) => {
-    setAllRecipes([...allRecipes, newRecipe]);
-    setIsAddMode(false);
-    setFilterType('custom'); // Switch to custom view to see the new recipe
+  const handleSaveRecipe = async (newRecipe: Recipe) => {
+    const savedRecipe = await saveRecipeToDB(newRecipe);
+    if (savedRecipe) {
+      setAllRecipes([savedRecipe, ...allRecipes]);
+      setIsAddMode(false);
+      setFilterType('custom'); // Switch to custom view to see the new recipe
+    } else {
+      alert('Erreur lors de la sauvegarde de la recette. Veuillez réessayer.');
+    }
   };
 
-  const handleAddComment = (recipeId: number, comment: Omit<Comment, 'id'>) => {
-    setAllRecipes(prevRecipes => prevRecipes.map(r => {
-      if (r.id === recipeId) {
-        const newComment = { ...comment, id: Date.now() };
-        return { ...r, comments: r.comments ? [newComment, ...r.comments] : [newComment] };
-      }
-      return r;
-    }));
+  const handleAddComment = async (recipeId: number, comment: Omit<Comment, 'id'>) => {
+    const savedComment = await addCommentToDB(recipeId, comment);
+    if (savedComment) {
+      setAllRecipes(prevRecipes => prevRecipes.map(r => {
+        if (r.id === recipeId) {
+          return { ...r, comments: r.comments ? [savedComment, ...r.comments] : [savedComment] };
+        }
+        return r;
+      }));
+    } else {
+      alert('Erreur lors de l\'ajout du commentaire. Veuillez réessayer.');
+    }
   };
 
   // Extract all unique tags
@@ -749,93 +757,128 @@ const App = () => {
 
   return (
     <div className="app-container">
-
-
-      {isAddMode ? (
-        <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} />
-      ) : !selectedRecipe ? (
-        <div className="list-view fade-in">
-          <header className="main-header">
-            <h1 className="main-title">Mes Recettes</h1>
-            <button className="add-btn-header" onClick={() => setIsAddMode(true)}>+ Ajouter</button>
-          </header>
-
-          <SearchBar value={searchTerm} onChange={setSearchTerm} />
-
-          <FilterPills
-            allTags={allTags}
-            selectedTags={selectedTags}
-            onToggleTag={toggleTag}
-          />
-
-          <div className="filter-tabs">
-            <button
-              className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
-              onClick={() => setFilterType('all')}
-            >
-              Toutes
-            </button>
-            <button
-              className={`filter-tab ${filterType === 'yums' ? 'active' : ''}`}
-              onClick={() => setFilterType('yums')}
-            >
-              Mes Miams ❤️
-            </button>
-            <button
-              className={`filter-tab ${filterType === 'custom' ? 'active' : ''}`}
-              onClick={() => setFilterType('custom')}
-            >
-              Mes Créations 🎨
-            </button>
-          </div>
-
-          <div className="recipe-list">
-            {filteredRecipes.length > 0 ? (
-              filteredRecipes.map(recipe => (
-                <RecipeCard
-                  key={recipe.id}
-                  recipe={recipe}
-                  onClick={() => setSelectedRecipeId(recipe.id)}
-                  isYummed={yums.includes(recipe.id)}
-                  onToggleYum={toggleYum}
-                />
-              ))
-            ) : (
-              <div className="empty-state">
-                <p>
-                  {filterType === 'yums'
-                    ? "Vous n'avez pas encore de Miams ! Ajoutez-en ❤️"
-                    : filterType === 'custom'
-                      ? "Pas encore de créations ! Lancez-vous 🍳"
-                      : `Aucune recette trouvée pour "${searchTerm}"`}
-                </p>
-              </div>
-            )}
-          </div>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="loading-state" style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          fontSize: '1.5rem',
+          color: 'var(--primary-color)'
+        }}>
+          <div>🍳 Chargement des recettes...</div>
         </div>
-      ) : (
-        <RecipeDetail
-          recipe={selectedRecipe}
-          onBack={() => setSelectedRecipeId(null)}
-          isYummed={yums.includes(selectedRecipe.id)}
-          onToggleYum={toggleYum}
-          onAddComment={handleAddComment}
-        />
       )}
 
-      {/* Chat Button & Overlay */}
-      {!isAddMode && (
-        <button
-          className="chat-fab-btn"
-          onClick={() => setIsChatOpen(true)}
-          aria-label="Ouvrir le coach cuisine IA"
-        >
-          👨‍🍳
-        </button>
+      {/* Error State */}
+      {error && (
+        <div className="error-state" style={{
+          padding: '20px',
+          textAlign: 'center',
+          color: '#d32f2f'
+        }}>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()} style={{
+            marginTop: '10px',
+            padding: '10px 20px',
+            background: 'var(--primary-color)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}>Réessayer</button>
+        </div>
       )}
 
-      {isChatOpen && <AICoach onClose={() => setIsChatOpen(false)} />}
+      {!isLoading && !error && (
+        <>
+          {isAddMode ? (
+            <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} />
+          ) : !selectedRecipe ? (
+            <div className="list-view fade-in">
+              <header className="main-header">
+                <h1 className="main-title">Mes Recettes</h1>
+                <button className="add-btn-header" onClick={() => setIsAddMode(true)}>+ Ajouter</button>
+              </header>
 
+              <SearchBar value={searchTerm} onChange={setSearchTerm} />
+
+              <FilterPills
+                allTags={allTags}
+                selectedTags={selectedTags}
+                onToggleTag={toggleTag}
+              />
+
+              <div className="filter-tabs">
+                <button
+                  className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
+                  onClick={() => setFilterType('all')}
+                >
+                  Toutes
+                </button>
+                <button
+                  className={`filter-tab ${filterType === 'yums' ? 'active' : ''}`}
+                  onClick={() => setFilterType('yums')}
+                >
+                  Mes Miams ❤️
+                </button>
+                <button
+                  className={`filter-tab ${filterType === 'custom' ? 'active' : ''}`}
+                  onClick={() => setFilterType('custom')}
+                >
+                  Mes Créations 🎨
+                </button>
+              </div>
+
+              <div className="recipe-list">
+                {filteredRecipes.length > 0 ? (
+                  filteredRecipes.map(recipe => (
+                    <RecipeCard
+                      key={recipe.id}
+                      recipe={recipe}
+                      onClick={() => setSelectedRecipeId(recipe.id)}
+                      isYummed={yums.includes(recipe.id)}
+                      onToggleYum={toggleYum}
+                    />
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <p>
+                      {filterType === 'yums'
+                        ? "Vous n'avez pas encore de Miams ! Ajoutez-en ❤️"
+                        : filterType === 'custom'
+                          ? "Pas encore de créations ! Lancez-vous 🍳"
+                          : `Aucune recette trouvée pour "${searchTerm}"`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <RecipeDetail
+              recipe={selectedRecipe}
+              onBack={() => setSelectedRecipeId(null)}
+              isYummed={yums.includes(selectedRecipe.id)}
+              onToggleYum={toggleYum}
+              onAddComment={handleAddComment}
+            />
+          )}
+
+          {/* Chat Button & Overlay */}
+          {!isAddMode && (
+            <button
+              className="chat-fab-btn"
+              onClick={() => setIsChatOpen(true)}
+              aria-label="Ouvrir le coach cuisine IA"
+            >
+              👨‍🍳
+            </button>
+          )}
+
+          {isChatOpen && <AICoach onClose={() => setIsChatOpen(false)} />}
+        </>
+      )}
     </div>
   );
 };
