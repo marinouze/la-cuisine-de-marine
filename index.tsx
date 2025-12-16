@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { GoogleGenAI } from "@google/genai";
+
 import { supabase } from './src/supabaseClient';
 import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, type DbComment } from './src/types';
 
 // --- Types ---
 interface Ingredient {
   emoji: string;
-  text: string;
+  quantity: number | null;
+  unit: string;
+  ingredient: string;
 }
 
 interface Comment {
@@ -32,10 +34,7 @@ interface Recipe {
   comments?: Comment[];
 }
 
-interface Message {
-  role: 'user' | 'model';
-  text: string;
-}
+
 
 // --- Helpers ---
 const calculateAverageRating = (comments?: Comment[]) => {
@@ -217,7 +216,11 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, o
             {recipe.ingredients.map((ing, idx) => (
               <li key={idx} className="ingredient-item">
                 <span className="ingredient-emoji">{ing.emoji}</span>
-                <span className="ingredient-text">{ing.text}</span>
+                <span className="ingredient-text">
+                  {ing.quantity ? `${ing.quantity} ` : ''}
+                  {ing.unit ? `${ing.unit} ` : ''}
+                  {ing.ingredient}
+                </span>
               </li>
             ))}
           </ul>
@@ -289,6 +292,89 @@ const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, o
       </div>
     </div>
   );
+};
+
+// --- Helper: Auto-select emoji based on ingredient name ---
+const getIngredientEmoji = (ingredientName: string): string => {
+  const name = ingredientName.toLowerCase().trim();
+
+  // Viandes
+  if (name.includes('poulet') || name.includes('volaille')) return '🍗';
+  if (name.includes('bœuf') || name.includes('boeuf') || name.includes('steak')) return '🥩';
+  if (name.includes('porc') || name.includes('jambon') || name.includes('lard')) return '🥓';
+  if (name.includes('agneau')) return '🐑';
+
+  // Poissons et fruits de mer
+  if (name.includes('poisson') || name.includes('saumon') || name.includes('truite')) return '🐟';
+  if (name.includes('crevette')) return '🦐';
+  if (name.includes('crabe')) return '🦀';
+  if (name.includes('homard')) return '🦞';
+  if (name.includes('moule') || name.includes('huître')) return '🦪';
+
+  // Légumes
+  if (name.includes('tomate')) return '🍅';
+  if (name.includes('carotte')) return '🥕';
+  if (name.includes('brocoli')) return '🥦';
+  if (name.includes('aubergine')) return '🍆';
+  if (name.includes('poivron') || name.includes('piment')) return '🌶️';
+  if (name.includes('maïs')) return '🌽';
+  if (name.includes('champignon')) return '🍄';
+  if (name.includes('pomme de terre') || name.includes('patate')) return '🥔';
+  if (name.includes('concombre')) return '🥒';
+  if (name.includes('laitue') || name.includes('salade')) return '🥬';
+  if (name.includes('avocat')) return '🥑';
+  if (name.includes('oignon')) return '🧅';
+  if (name.includes('ail')) return '🧄';
+
+  // Fruits
+  if (name.includes('pomme')) return '🍎';
+  if (name.includes('banane')) return '🍌';
+  if (name.includes('orange') || name.includes('clémentine')) return '🍊';
+  if (name.includes('citron')) return '🍋';
+  if (name.includes('fraise')) return '🍓';
+  if (name.includes('raisin')) return '🍇';
+  if (name.includes('pastèque') || name.includes('melon')) return '🍉';
+  if (name.includes('pêche') || name.includes('abricot')) return '🍑';
+  if (name.includes('cerise')) return '🍒';
+  if (name.includes('ananas')) return '🍍';
+  if (name.includes('kiwi')) return '🥝';
+  if (name.includes('mangue')) return '🥭';
+
+  // Produits laitiers
+  if (name.includes('lait')) return '🥛';
+  if (name.includes('fromage')) return '🧀';
+  if (name.includes('beurre')) return '🧈';
+  if (name.includes('yaourt') || name.includes('yogourt')) return '🥛';
+  if (name.includes('crème')) return '🥛';
+
+  // Œufs
+  if (name.includes('œuf') || name.includes('oeuf')) return '🥚';
+
+  // Pains et céréales
+  if (name.includes('pain')) return '🍞';
+  if (name.includes('riz')) return '🍚';
+  if (name.includes('pâtes') || name.includes('pates') || name.includes('spaghetti') || name.includes('macaroni')) return '🍝';
+  if (name.includes('farine')) return '🌾';
+  if (name.includes('croissant')) return '🥐';
+
+  // Condiments et épices
+  if (name.includes('sel')) return '🧂';
+  if (name.includes('sucre')) return '🍬';
+  if (name.includes('miel')) return '🍯';
+  if (name.includes('huile')) return '🫗';
+
+  // Noix
+  if (name.includes('cacahuète') || name.includes('cacahouète') || name.includes('arachide')) return '🥜';
+  if (name.includes('noix') || name.includes('noisette') || name.includes('amande')) return '🌰';
+
+  // Boissons
+  if (name.includes('vin')) return '🍷';
+  if (name.includes('bière')) return '🍺';
+  if (name.includes('café')) return '☕';
+  if (name.includes('thé')) return '🍵';
+
+  // Default
+  return '🥘';
 };
 
 // --- Add Recipe Form Component ---
@@ -364,13 +450,12 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel }) => {
       imagePrompt: `${title} gourmet food warm photography`,
       ingredients: ingredients
         .filter(i => i.name.trim() !== "")
-        .map(i => {
-          const unitStr = i.unit && i.unit !== "(vide)" ? ` ${i.unit}` : "";
-          return {
-            emoji: "🥘", // Default emoji
-            text: `${i.qty}${unitStr} ${i.name}`.trim()
-          };
-        }),
+        .map(i => ({
+          emoji: getIngredientEmoji(i.name),
+          quantity: i.qty ? parseFloat(i.qty) : null,
+          unit: i.unit && i.unit !== "(vide)" ? i.unit : "",
+          ingredient: i.name.trim()
+        })),
       steps: steps.filter(s => s.trim() !== ""),
       prepTime: prepTime || "10 min",
       cookTime: cookTime || "15 min",
@@ -501,85 +586,7 @@ const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel }) => {
 };
 
 
-// --- AI Coach Component ---
-const AICoach: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: "Bonjour ! Je suis Chef Miam 👨‍🍳. Qu'avez-vous dans votre frigo ? Je peux vous aider à trouver une idée de recette !" }
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const chatRef = useRef<any>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    chatRef.current = ai.chats.create({
-      model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction: "Tu es Chef Miam, un assistant culinaire expert, chaleureux et dynamique pour une application de recettes. Ton rôle est d'aider les utilisateurs à cuisiner avec les ingrédients qu'ils ont sous la main (dans leur frigo). Propose des recettes simples, donne des astuces de cuisson, et sois toujours encourageant. Utilise des emojis dans tes réponses. Parle en français. Sois concis.",
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
-    const userText = input;
-    setInput("");
-    setMessages(prev => [...prev, { role: 'user', text: userText }]);
-    setIsLoading(true);
-
-    try {
-      const response = await chatRef.current.sendMessage({ message: userText });
-      setMessages(prev => [...prev, { role: 'model', text: response.text }]);
-    } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { role: 'model', text: "Oups ! J'ai fait brûler la sauce... (Erreur de connexion). Réessayez !" }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="chat-overlay fade-in">
-      <div className="chat-window">
-        <div className="chat-header">
-          <h3>Chef Miam 👨‍🍳</h3>
-          <button className="chat-close-btn" onClick={onClose}>✕</button>
-        </div>
-        <div className="chat-messages">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`message-bubble ${msg.role}`}>
-              {msg.text}
-            </div>
-          ))}
-          {isLoading && (
-            <div className="message-bubble model typing">
-              Le chef réfléchit... 🍲
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-        <div className="chat-input-area">
-          <input
-            type="text"
-            className="chat-input"
-            placeholder="J'ai des courgettes et..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          />
-          <button className="chat-send-btn" onClick={sendMessage} disabled={isLoading}>
-            ➤
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // --- Database Helper Functions ---
 
@@ -677,7 +684,7 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [yums, setYums] = useState<number[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom'>('all'); // 'all', 'yums', 'custom'
-  const [isChatOpen, setIsChatOpen] = useState(false);
+
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Fetch recipes from Supabase on mount
@@ -741,7 +748,7 @@ const App = () => {
   const filteredRecipes = allRecipes.filter(r => {
     const matchesSearch =
       r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.ingredients.some(i => i.text.toLowerCase().includes(searchTerm.toLowerCase()));
+      r.ingredients.some(i => i?.ingredient?.toLowerCase().includes(searchTerm.toLowerCase()));
 
     let matchesFilter = true;
     if (filterType === 'yums') matchesFilter = yums.includes(r.id);
@@ -865,18 +872,7 @@ const App = () => {
             />
           )}
 
-          {/* Chat Button & Overlay */}
-          {!isAddMode && (
-            <button
-              className="chat-fab-btn"
-              onClick={() => setIsChatOpen(true)}
-              aria-label="Ouvrir le coach cuisine IA"
-            >
-              👨‍🍳
-            </button>
-          )}
 
-          {isChatOpen && <AICoach onClose={() => setIsChatOpen(false)} />}
         </>
       )}
     </div>

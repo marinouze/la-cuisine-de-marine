@@ -16,7 +16,9 @@ export interface DbRecipe {
 
 export interface DbIngredient {
     emoji: string;
-    text: string;
+    quantity: number | null;
+    unit: string;
+    ingredient: string;
 }
 
 export interface DbComment {
@@ -32,7 +34,9 @@ export interface DbComment {
 // Application types (already defined in index.tsx)
 export interface Ingredient {
     emoji: string;
-    text: string;
+    quantity: number | null;
+    unit: string;
+    ingredient: string;
 }
 
 export interface Comment {
