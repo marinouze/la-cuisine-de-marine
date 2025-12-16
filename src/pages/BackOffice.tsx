@@ -159,8 +159,16 @@ const BackOffice = () => {
         }
     };
 
-    const startEditingRecipe = (recipe: Recipe) => {
-        setEditingRecipe(recipe);
+    const startEditingRecipe = async (recipe: Recipe) => {
+        // Fetch tags for this recipe
+        const { data: recipeTagsData } = await supabase
+            .from('recipe_tags')
+            .select('tags!inner(name)')
+            .eq('recipe_id', recipe.id);
+
+        const recipeTags = (recipeTagsData || []).map((rt: any) => rt.tags.name);
+
+        setEditingRecipe({ ...recipe, tags: recipeTags });
         setEditMode('edit');
     };
 

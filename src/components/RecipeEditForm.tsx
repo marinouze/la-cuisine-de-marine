@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getIngredientEmoji } from '../utils/ingredientEmoji';
 import type { Recipe } from '../types';
+import TagSelector from './TagSelector';
 
 interface RecipeEditFormProps {
     recipe: Recipe;
@@ -32,8 +33,6 @@ const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags = [] }: Recipe
 
     // Initialize tags from recipe
     const [selectedTags, setSelectedTags] = useState<string[]>(recipe.tags || []);
-    const [showNewTagInput, setShowNewTagInput] = useState(false);
-    const [newTagName, setNewTagName] = useState('');
 
     const handleAddIngredient = () => {
         setIngredients([...ingredients, { qty: "", unit: "", name: "" }]);
@@ -69,11 +68,10 @@ const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags = [] }: Recipe
         );
     };
 
-    const handleAddNewTag = () => {
-        if (newTagName.trim() && !selectedTags.includes(newTagName.trim())) {
-            setSelectedTags(prev => [...prev, newTagName.trim()]);
-            setNewTagName('');
-            setShowNewTagInput(false);
+    const handleAddNewTag = (tagName: string) => {
+        // Add to selected tags immediately (will be saved when recipe is submitted)
+        if (!selectedTags.includes(tagName)) {
+            setSelectedTags(prev => [...prev, tagName]);
         }
     };
 
@@ -197,55 +195,12 @@ const RecipeEditForm = ({ recipe, onSave, onCancel, availableTags = [] }: Recipe
 
                 <div className="form-section">
                     <label className="form-label">Tags</label>
-                    <div className="tag-checkbox-list">
-                        {availableTags.map(tag => (
-                            <label key={tag} className="tag-checkbox-item">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedTags.includes(tag)}
-                                    onChange={() => handleToggleTag(tag)}
-                                />
-                                <span>{tag}</span>
-                            </label>
-                        ))}
-                    </div>
-                    {!showNewTagInput ? (
-                        <button
-                            type="button"
-                            className="add-tag-btn"
-                            onClick={() => setShowNewTagInput(true)}
-                        >
-                            + Ajouter un tag
-                        </button>
-                    ) : (
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                            <input
-                                type="text"
-                                className="form-input"
-                                placeholder="Nom du nouveau tag..."
-                                value={newTagName}
-                                onChange={(e) => setNewTagName(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNewTag())}
-                                autoFocus
-                            />
-                            <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={handleAddNewTag}
-                                style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
-                            >
-                                OK
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-secondary"
-                                onClick={() => { setShowNewTagInput(false); setNewTagName(''); }}
-                                style={{ padding: '8px 16px' }}
-                            >
-                                Annuler
-                            </button>
-                        </div>
-                    )}
+                    <TagSelector
+                        availableTags={availableTags}
+                        selectedTags={selectedTags}
+                        onToggleTag={handleToggleTag}
+                        onAddNewTag={handleAddNewTag}
+                    />
                 </div>
 
 
