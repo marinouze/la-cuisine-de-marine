@@ -3,7 +3,7 @@ name: Deploy Recipe App to OVH
 on:
   push:
     branches:
-      - main
+      - ovh
 
 jobs:
   build-and-deploy:
