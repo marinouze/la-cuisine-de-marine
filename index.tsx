@@ -1,0 +1,845 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import { GoogleGenAI } from "@google/genai";
+
+// --- Types ---
+interface Ingredient {
+  emoji: string;
+  text: string;
+}
+
+interface Comment {
+  id: number;
+  user: string;
+  rating: number;
+  text: string;
+  date: string;
+}
+
+interface Recipe {
+  id: number;
+  title: string;
+  imagePrompt: string;
+  ingredients: Ingredient[];
+  steps: string[];
+  prepTime: string;
+  cookTime: string;
+  servings: number;
+  tags: string[];
+  isCustom?: boolean;
+  comments?: Comment[];
+}
+
+interface Message {
+  role: 'user' | 'model';
+  text: string;
+}
+
+// --- Data ---
+const initialRecipes: Recipe[] = [
+  {
+    id: 1,
+    title: "Riz aux Crevettes et à la Citronnelle",
+    imagePrompt: "Delicious shrimp and lemongrass rice dish gourmet food photography bright colors",
+    ingredients: [
+      { emoji: "🦐", text: "Crevettes crues x 20" },
+      { emoji: "🌿", text: "Citronnelle 2 tiges" },
+      { emoji: "🍚", text: "Riz thaï 2 verres (200g)" },
+      { emoji: "🍃", text: "Basilic 1 botte" },
+      { emoji: "🍛", text: "Curry 2 cuil. à soupe" },
+      { emoji: "🧂", text: "Sel, poivre" }
+    ],
+    steps: [
+      "Émincez finement la citronnelle et mélangez-la dans un saladier avec le riz, le curry, les crevettes, le basilic coupé aux ciseaux et 4 verres d'eau (40 cl).",
+      "Recouvrez d'un film étirable et faites cuire 13 min à 850 W au micro-ondes.",
+      "Salez, poivrez, mélangez et dégustez."
+    ],
+    prepTime: "2 min",
+    cookTime: "13 min",
+    servings: 4,
+    tags: ["Asiatique", "Simplissime", "Plat principal"],
+    comments: [
+      { id: 101, user: "Julie", rating: 5, text: "Incroyable ! Super rapide et délicieux.", date: "12 Oct" },
+      { id: 102, user: "Marc", rating: 4, text: "J'ai ajouté un peu de piment, c'était top.", date: "15 Oct" }
+    ]
+  },
+  {
+    id: 2,
+    title: "Poulet aux Noix de Cajou",
+    imagePrompt: "Chicken with cashew nuts asian style dish food photography gourmet",
+    ingredients: [
+      { emoji: "🍗", text: "Blancs de poulet x 4" },
+      { emoji: "🧅", text: "Oignon doux x 1" },
+      { emoji: "🥜", text: "Noix de cajou 200g" },
+      { emoji: "🍯", text: "Miel liquide 2 cuil. à soupe" },
+      { emoji: "🥢", text: "Sauce soja 4 cuil. à soupe" },
+      { emoji: "🌿", text: "Coriandre 1 botte" },
+      { emoji: "🫒", text: "Huile d'olive 3 cuil. à soupe" }
+    ],
+    steps: [
+      "Faites saisir les blancs de poulet coupés en morceaux dans une poêle avec 3 cuil. à soupe d'huile d'olive.",
+      "Ajoutez l'oignon haché, les noix de cajou, laissez roussir 5 min puis versez le miel et la sauce soja.",
+      "Faites cuire 5 min en remuant et ajoutez la coriandre coupée aux ciseaux."
+    ],
+    prepTime: "5 min",
+    cookTime: "12 min",
+    servings: 4,
+    tags: ["Poulet", "Simplissime", "Plat principal"],
+    comments: [
+      { id: 201, user: "Sophie", rating: 5, text: "Mon plat préféré du soir !", date: "02 Nov" }
+    ]
+  },
+  {
+    id: 3,
+    title: "Risotto aux Champignons",
+    imagePrompt: "Creamy mushroom risotto gourmet food photography top view",
+    ingredients: [
+      { emoji: "🧊", text: "1 Kub Or" },
+      { emoji: "🍚", text: "300g de riz rond" },
+      { emoji: "🌿", text: "2 branches de persil" },
+      { emoji: "🧄", text: "2 gousses d'ail" },
+      { emoji: "🧅", text: "2 échalotes moyennes" },
+      { emoji: "🥛", text: "1 pot de crème fraîche" },
+      { emoji: "🧀", text: "1/2 pot de mascarpone" },
+      { emoji: "🍄", text: "Champignons variés 200g" }
+    ],
+    steps: [
+      "Émincer oignons, persil & ail. Faire bouillir les champignons dans de l'eau un peu salée.",
+      "Une fois porté à ébullition, égoutter les champignons & réserver l'eau de cuisson.",
+      "Faire blondir échalotes, persil & ail dans de l'huile d'olive.",
+      "Ajouter la crème fraîche, remuer, rajouter les champignons, bien les imprégner puis ajouter le riz.",
+      "Bien faire revenir puis rajouter le mascarpone.",
+      "Faire revenir puis rajouter l'eau de cuisson pour recouvrir. Laisser mijoter en ajoutant de l'eau jusqu'à cuisson du riz.",
+      "Dans le dernier ajout d'eau, émietter le Kub Or."
+    ],
+    prepTime: "15 min",
+    cookTime: "25 min",
+    servings: 4,
+    tags: ["Réconfortant", "Recette perso", "Végétarien", "Plat principal"],
+    comments: []
+  },
+  {
+    id: 4,
+    title: "Blanquette poulet au potimarron",
+    imagePrompt: "Creamy chicken stew with pumpkin potimarron and tarragon gourmet food photography warm colors",
+    ingredients: [
+      { emoji: "🍗", text: "2 blancs de poulet" },
+      { emoji: "🎃", text: "1 petit potimarron" },
+      { emoji: "🌿", text: "1/2 botte d'estragon" },
+      { emoji: "🥛", text: "16 cl de crème liquide" }
+    ],
+    steps: [
+      "Laver, équeuter et découper le potimarron avec la peau en petits dés.",
+      "Couper le poulet en morceaux. Faire saisir 5 mn les blancs de poulet dans une sauteuse.",
+      "Ajouter les dés de potimarron, baisser le feu et laisser cuire à couvert environ 15 min jusqu'à tendreté.",
+      "Ajouter la crème liquide et l'estragon ciselé, mélanger et servir chaud."
+    ],
+    prepTime: "15 min",
+    cookTime: "20 min",
+    servings: 3,
+    tags: ["Poulet", "Automne", "Plat principal"],
+    comments: [
+      { id: 401, user: "Thomas", rating: 4, text: "Très bonne recette d'automne.", date: "20 Oct" },
+      { id: 402, user: "Léa", rating: 5, text: "L'estragon change tout !", date: "22 Oct" }
+    ]
+  }
+];
+
+// --- Helpers ---
+const calculateAverageRating = (comments?: Comment[]) => {
+  if (!comments || comments.length === 0) return 0;
+  const sum = comments.reduce((acc, c) => acc + c.rating, 0);
+  return (sum / comments.length).toFixed(1);
+};
+
+// --- Components ---
+
+const SearchBar: React.FC<{ value: string, onChange: (v: string) => void }> = ({ value, onChange }) => (
+  <div className="search-wrapper">
+    <div className="search-container">
+      <span className="search-icon">🔍</span>
+      <input
+        type="text"
+        className="search-input"
+        placeholder="Rechercher une recette..."
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  </div>
+);
+
+const FilterPills: React.FC<{
+  allTags: string[],
+  selectedTags: string[],
+  onToggleTag: (tag: string) => void
+}> = ({ allTags, selectedTags, onToggleTag }) => (
+  <div className="filter-pills-container">
+    {allTags.map(tag => (
+      <button
+        key={tag}
+        className={`filter-pill ${selectedTags.includes(tag) ? 'active' : ''}`}
+        onClick={() => onToggleTag(tag)}
+      >
+        {tag}
+      </button>
+    ))}
+  </div>
+);
+
+interface RecipeCardProps {
+  recipe: Recipe;
+  onClick: () => void;
+  isYummed: boolean;
+  onToggleYum: (id: number) => void;
+}
+
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick, isYummed, onToggleYum }) => {
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recipe.imagePrompt)}?width=120&height=120&nologo=true`;
+  const rating = calculateAverageRating(recipe.comments);
+
+  return (
+    <div className="recipe-card" onClick={onClick}>
+      <img src={imageUrl} alt={recipe.title} className="recipe-card-thumb" loading="lazy" />
+      <div className="recipe-card-info">
+        <h3 className="recipe-card-title">{recipe.title}</h3>
+        <div className="recipe-card-meta">
+          <span>⏱️ {recipe.prepTime}</span>
+          <span>🔥 {recipe.cookTime}</span>
+          {Number(rating) > 0 && <span>⭐ {rating}</span>}
+        </div>
+        <div className="recipe-card-tags">
+          {recipe.tags.map(tag => (
+            <span key={tag} className="card-tag">{tag}</span>
+          ))}
+        </div>
+      </div>
+      <div className="recipe-card-actions">
+        <button
+          className={`yum-btn-mini ${isYummed ? 'active' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleYum(recipe.id);
+          }}
+        >
+          {isYummed ? '❤️' : '🤍'}
+        </button>
+        <div className="recipe-card-arrow">➔</div>
+      </div>
+    </div>
+  );
+};
+
+// --- Recipe Detail Components ---
+
+const StarRating: React.FC<{ rating: number, setRating: (r: number) => void, readOnly?: boolean }> = ({ rating, setRating, readOnly = false }) => {
+  return (
+    <div className={`star-rating ${readOnly ? 'readonly' : ''}`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          className={`star ${star <= rating ? 'filled' : ''}`}
+          onClick={() => !readOnly && setRating(star)}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+};
+
+interface RecipeDetailProps {
+  recipe: Recipe;
+  onBack: () => void;
+  isYummed: boolean;
+  onToggleYum: (id: number) => void;
+  onAddComment: (recipeId: number, comment: Omit<Comment, 'id'>) => void;
+}
+
+const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }) => {
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recipe.imagePrompt)}?width=800&height=500&nologo=true`;
+  const [newCommentName, setNewCommentName] = useState("");
+  const [newCommentText, setNewCommentText] = useState("");
+  const [newCommentRating, setNewCommentRating] = useState(0);
+
+  const handleSubmitComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newCommentName && newCommentText && newCommentRating > 0) {
+      onAddComment(recipe.id, {
+        user: newCommentName,
+        text: newCommentText,
+        rating: newCommentRating,
+        date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+      });
+      setNewCommentName("");
+      setNewCommentText("");
+      setNewCommentRating(0);
+    }
+  };
+
+  const avgRating = calculateAverageRating(recipe.comments);
+
+  return (
+    <div className="detail-view fade-in">
+      <button className="back-button" onClick={onBack}>
+        ← Sommaire
+      </button>
+
+      <div className="detail-header">
+        <div className="detail-image-container">
+          <img src={imageUrl} alt={recipe.title} className="detail-image" />
+
+          <button
+            className={`yum-fab ${isYummed ? 'active' : ''}`}
+            onClick={() => onToggleYum(recipe.id)}
+            aria-label={isYummed ? "Retirer des Miams" : "Ajouter aux Miams"}
+          >
+            {isYummed ? '❤️' : '🤍'}
+          </button>
+
+          <div className="detail-meta-overlay">
+            <div className="meta-pill">👤 {recipe.servings} pers.</div>
+            <div className="meta-pill">⏱️ {recipe.prepTime}</div>
+            <div className="meta-pill">🔥 {recipe.cookTime}</div>
+          </div>
+        </div>
+
+        <h1 className="detail-title">{recipe.title}</h1>
+        {Number(avgRating) > 0 && (
+          <div style={{ textAlign: 'center', marginBottom: '15px', fontWeight: 'bold', color: '#666' }}>
+            Note moyenne : ⭐ {avgRating} / 5
+          </div>
+        )}
+
+        <div className="detail-tags">
+          {recipe.tags.map(tag => (
+            <span key={tag} className="detail-tag">{tag}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="detail-content">
+        <section className="section-ingredients">
+          <h3 className="section-title">Ingrédients</h3>
+          <ul className="ingredients-grid">
+            {recipe.ingredients.map((ing, idx) => (
+              <li key={idx} className="ingredient-item">
+                <span className="ingredient-emoji">{ing.emoji}</span>
+                <span className="ingredient-text">{ing.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="section-steps">
+          <h3 className="section-title">Préparation</h3>
+          <ol className="steps-list">
+            {recipe.steps.map((step, idx) => (
+              <li key={idx}>
+                <span className="step-number">{idx + 1}</span>
+                <p className="step-text">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* Comments Section */}
+        <section className="section-comments">
+          <h3 className="section-title">Avis & Commentaires</h3>
+
+          <div className="comments-list">
+            {recipe.comments && recipe.comments.length > 0 ? (
+              recipe.comments.map(comment => (
+                <div key={comment.id} className="comment-bubble">
+                  <div className="comment-header">
+                    <span className="comment-user">{comment.user}</span>
+                    <span className="comment-date">{comment.date}</span>
+                  </div>
+                  <StarRating rating={comment.rating} setRating={() => { }} readOnly />
+                  <p className="comment-text">{comment.text}</p>
+                </div>
+              ))
+            ) : (
+              <p className="no-comments">Soyez le premier à donner votre avis !</p>
+            )}
+          </div>
+
+          <form className="add-comment-form" onSubmit={handleSubmitComment}>
+            <h4>Ajouter un avis</h4>
+            <div className="form-group">
+              <input
+                className="comment-input"
+                placeholder="Votre nom"
+                value={newCommentName}
+                onChange={e => setNewCommentName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#555' }}>Votre note :</label>
+              <StarRating rating={newCommentRating} setRating={setNewCommentRating} />
+            </div>
+            <div className="form-group">
+              <textarea
+                className="comment-input"
+                placeholder="Votre commentaire..."
+                rows={3}
+                value={newCommentText}
+                onChange={e => setNewCommentText(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="submit-comment-btn" disabled={!newCommentName || !newCommentText || newCommentRating === 0}>
+              Envoyer
+            </button>
+          </form>
+        </section>
+      </div>
+    </div>
+  );
+};
+
+// --- Add Recipe Form Component ---
+
+interface AddRecipeFormProps {
+  onSave: (recipe: Recipe) => void;
+  onCancel: () => void;
+}
+
+const AddRecipeForm: React.FC<AddRecipeFormProps> = ({ onSave, onCancel }) => {
+  const [title, setTitle] = useState("");
+  const [prepTime, setPrepTime] = useState("");
+  const [cookTime, setCookTime] = useState("");
+  const [servings, setServings] = useState(2);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+  const UNIT_OPTIONS = ["(vide)", "g", "kg", "ml", "cl", "L", "c.à.s", "c.à.c", "pincée", "verre", "tasse"];
+
+  // Ingredients: Separate fields
+  const [ingredients, setIngredients] = useState<{ qty: string, unit: string, name: string }[]>([{ qty: "", unit: "", name: "" }]);
+
+  // Steps
+  const [steps, setSteps] = useState<string[]>([""]);
+
+  const handleAddIngredient = () => {
+    setIngredients([...ingredients, { qty: "", unit: "", name: "" }]);
+  };
+
+  const handleIngredientChange = (index: number, field: 'qty' | 'name' | 'unit', value: string) => {
+    const newIngs = [...ingredients];
+    newIngs[index][field] = value;
+    setIngredients(newIngs);
+  };
+
+  const handleRemoveIngredient = (index: number) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
+  };
+
+  const handleAddStep = () => {
+    setSteps([...steps, ""]);
+  };
+
+  const handleStepChange = (index: number, value: string) => {
+    const newSteps = [...steps];
+    newSteps[index] = value;
+    setSteps(newSteps);
+  };
+
+  const handleRemoveStep = (index: number) => {
+    setSteps(steps.filter((_, i) => i !== index));
+  };
+
+  const handleAddTag = () => {
+    if (tagInput.trim()) {
+      setTags([...tags, tagInput.trim()]);
+      setTagInput("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(t => t !== tagToRemove));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title) return;
+
+    // Construct Recipe Object
+    const newRecipe: Recipe = {
+      id: Date.now(), // Simple ID generation
+      title,
+      imagePrompt: `${title} gourmet food warm photography`,
+      ingredients: ingredients
+        .filter(i => i.name.trim() !== "")
+        .map(i => {
+          const unitStr = i.unit && i.unit !== "(vide)" ? ` ${i.unit}` : "";
+          return {
+            emoji: "🥘", // Default emoji
+            text: `${i.qty}${unitStr} ${i.name}`.trim()
+          };
+        }),
+      steps: steps.filter(s => s.trim() !== ""),
+      prepTime: prepTime || "10 min",
+      cookTime: cookTime || "15 min",
+      servings,
+      tags: [...tags, "Perso"],
+      isCustom: true,
+      comments: []
+    };
+
+    onSave(newRecipe);
+  };
+
+  return (
+    <div className="add-recipe-view fade-in">
+      <button className="back-button" style={{ position: 'static', marginBottom: '20px' }} onClick={onCancel}>
+        ⬅ Annuler
+      </button>
+      <h2 style={{ fontFamily: 'Pacifico, cursive', margin: '0 0 20px 0', color: 'var(--primary-color)', textAlign: 'center' }}>Nouvelle Recette</h2>
+
+      <form onSubmit={handleSubmit} className="add-recipe-form">
+
+        <div className="form-section">
+          <label className="form-label">Titre de la recette</label>
+          <input
+            type="text"
+            className="form-input"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Ex: Tarte aux pommes..."
+            required
+          />
+        </div>
+
+        <div className="form-row">
+          <div className="form-section half">
+            <label className="form-label">Préparation</label>
+            <input type="text" className="form-input" value={prepTime} onChange={e => setPrepTime(e.target.value)} placeholder="10 min" />
+          </div>
+          <div className="form-section half">
+            <label className="form-label">Cuisson</label>
+            <input type="text" className="form-input" value={cookTime} onChange={e => setCookTime(e.target.value)} placeholder="20 min" />
+          </div>
+        </div>
+
+        <div className="form-section">
+          <label className="form-label">Personnes: {servings}</label>
+          <input type="range" min="1" max="12" value={servings} onChange={e => setServings(parseInt(e.target.value))} className="form-range" />
+        </div>
+
+        <div className="form-section">
+          <label className="form-label">Ingrédients</label>
+          {ingredients.map((ing, idx) => (
+            <div key={idx} className="ingredient-input-row">
+              <input
+                type="text"
+                className="form-input qty"
+                placeholder="Qté"
+                value={ing.qty}
+                onChange={e => handleIngredientChange(idx, 'qty', e.target.value)}
+              />
+              <select
+                className="form-input unit"
+                value={ing.unit}
+                onChange={e => handleIngredientChange(idx, 'unit', e.target.value)}
+              >
+                {UNIT_OPTIONS.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                className="form-input name"
+                placeholder="Ingrédient"
+                value={ing.name}
+                onChange={e => handleIngredientChange(idx, 'name', e.target.value)}
+              />
+              <button type="button" className="remove-btn" onClick={() => handleRemoveIngredient(idx)}>✕</button>
+            </div>
+          ))}
+          <button type="button" className="add-btn" onClick={handleAddIngredient}>+ Ajouter un ingrédient</button>
+        </div>
+
+        <div className="form-section">
+          <label className="form-label">Étapes</label>
+          {steps.map((step, idx) => (
+            <div key={idx} className="step-input-row">
+              <span className="step-idx">{idx + 1}</span>
+              <textarea
+                className="form-input"
+                placeholder="Décrivez l'étape..."
+                value={step}
+                onChange={e => handleStepChange(idx, e.target.value)}
+                rows={2}
+              />
+              <button type="button" className="remove-btn" onClick={() => handleRemoveStep(idx)}>✕</button>
+            </div>
+          ))}
+          <button type="button" className="add-btn" onClick={handleAddStep}>+ Ajouter une étape</button>
+        </div>
+
+        <div className="form-section">
+          <label className="form-label">Tags</label>
+          <div className="tag-input-wrapper">
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Ajouter un tag..."
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+            />
+            <button type="button" className="add-tag-btn" onClick={handleAddTag}>OK</button>
+          </div>
+          <div className="tags-preview">
+            {tags.map(t => (
+              <span key={t} className="preview-tag">
+                {t} <button type="button" onClick={() => handleRemoveTag(t)}>×</button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <button type="submit" className="submit-btn">ENREGISTRER LA RECETTE ✨</button>
+
+      </form>
+    </div>
+  );
+};
+
+
+// --- AI Coach Component ---
+const AICoach: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'model', text: "Bonjour ! Je suis Chef Miam 👨‍🍳. Qu'avez-vous dans votre frigo ? Je peux vous aider à trouver une idée de recette !" }
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const chatRef = useRef<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    chatRef.current = ai.chats.create({
+      model: 'gemini-2.5-flash',
+      config: {
+        systemInstruction: "Tu es Chef Miam, un assistant culinaire expert, chaleureux et dynamique pour une application de recettes. Ton rôle est d'aider les utilisateurs à cuisiner avec les ingrédients qu'ils ont sous la main (dans leur frigo). Propose des recettes simples, donne des astuces de cuisson, et sois toujours encourageant. Utilise des emojis dans tes réponses. Parle en français. Sois concis.",
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    const userText = input;
+    setInput("");
+    setMessages(prev => [...prev, { role: 'user', text: userText }]);
+    setIsLoading(true);
+
+    try {
+      const response = await chatRef.current.sendMessage({ message: userText });
+      setMessages(prev => [...prev, { role: 'model', text: response.text }]);
+    } catch (error) {
+      console.error(error);
+      setMessages(prev => [...prev, { role: 'model', text: "Oups ! J'ai fait brûler la sauce... (Erreur de connexion). Réessayez !" }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="chat-overlay fade-in">
+      <div className="chat-window">
+        <div className="chat-header">
+          <h3>Chef Miam 👨‍🍳</h3>
+          <button className="chat-close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="chat-messages">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`message-bubble ${msg.role}`}>
+              {msg.text}
+            </div>
+          ))}
+          {isLoading && (
+            <div className="message-bubble model typing">
+              Le chef réfléchit... 🍲
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        <div className="chat-input-area">
+          <input
+            type="text"
+            className="chat-input"
+            placeholder="J'ai des courgettes et..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          />
+          <button className="chat-send-btn" onClick={sendMessage} disabled={isLoading}>
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const App = () => {
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>(initialRecipes);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
+  const [isAddMode, setIsAddMode] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [yums, setYums] = useState<number[]>([]);
+  const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom'>('all'); // 'all', 'yums', 'custom'
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  const toggleYum = (id: number) => {
+    setYums(prev =>
+      prev.includes(id) ? prev.filter(y => y !== id) : [...prev, id]
+    );
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSaveRecipe = (newRecipe: Recipe) => {
+    setAllRecipes([...allRecipes, newRecipe]);
+    setIsAddMode(false);
+    setFilterType('custom'); // Switch to custom view to see the new recipe
+  };
+
+  const handleAddComment = (recipeId: number, comment: Omit<Comment, 'id'>) => {
+    setAllRecipes(prevRecipes => prevRecipes.map(r => {
+      if (r.id === recipeId) {
+        const newComment = { ...comment, id: Date.now() };
+        return { ...r, comments: r.comments ? [newComment, ...r.comments] : [newComment] };
+      }
+      return r;
+    }));
+  };
+
+  // Extract all unique tags
+  const allTags = Array.from(new Set(allRecipes.flatMap(r => r.tags))).sort();
+
+  const filteredRecipes = allRecipes.filter(r => {
+    const matchesSearch =
+      r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.ingredients.some(i => i.text.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    let matchesFilter = true;
+    if (filterType === 'yums') matchesFilter = yums.includes(r.id);
+    if (filterType === 'custom') matchesFilter = !!r.isCustom;
+
+    // Recipe must contain ALL selected tags
+    const matchesTags = selectedTags.length === 0 || selectedTags.every(tag => r.tags.includes(tag));
+
+    return matchesSearch && matchesFilter && matchesTags;
+  });
+
+  const selectedRecipe = allRecipes.find(r => r.id === selectedRecipeId);
+
+  return (
+    <div className="app-container">
+
+
+      {isAddMode ? (
+        <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} />
+      ) : !selectedRecipe ? (
+        <div className="list-view fade-in">
+          <header className="main-header">
+            <h1 className="main-title">Mes Recettes</h1>
+            <button className="add-btn-header" onClick={() => setIsAddMode(true)}>+ Ajouter</button>
+          </header>
+
+          <SearchBar value={searchTerm} onChange={setSearchTerm} />
+
+          <FilterPills
+            allTags={allTags}
+            selectedTags={selectedTags}
+            onToggleTag={toggleTag}
+          />
+
+          <div className="filter-tabs">
+            <button
+              className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterType('all')}
+            >
+              Toutes
+            </button>
+            <button
+              className={`filter-tab ${filterType === 'yums' ? 'active' : ''}`}
+              onClick={() => setFilterType('yums')}
+            >
+              Mes Miams ❤️
+            </button>
+            <button
+              className={`filter-tab ${filterType === 'custom' ? 'active' : ''}`}
+              onClick={() => setFilterType('custom')}
+            >
+              Mes Créations 🎨
+            </button>
+          </div>
+
+          <div className="recipe-list">
+            {filteredRecipes.length > 0 ? (
+              filteredRecipes.map(recipe => (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  onClick={() => setSelectedRecipeId(recipe.id)}
+                  isYummed={yums.includes(recipe.id)}
+                  onToggleYum={toggleYum}
+                />
+              ))
+            ) : (
+              <div className="empty-state">
+                <p>
+                  {filterType === 'yums'
+                    ? "Vous n'avez pas encore de Miams ! Ajoutez-en ❤️"
+                    : filterType === 'custom'
+                      ? "Pas encore de créations ! Lancez-vous 🍳"
+                      : `Aucune recette trouvée pour "${searchTerm}"`}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <RecipeDetail
+          recipe={selectedRecipe}
+          onBack={() => setSelectedRecipeId(null)}
+          isYummed={yums.includes(selectedRecipe.id)}
+          onToggleYum={toggleYum}
+          onAddComment={handleAddComment}
+        />
+      )}
+
+      {/* Chat Button & Overlay */}
+      {!isAddMode && (
+        <button
+          className="chat-fab-btn"
+          onClick={() => setIsChatOpen(true)}
+          aria-label="Ouvrir le coach cuisine IA"
+        >
+          👨‍🍳
+        </button>
+      )}
+
+      {isChatOpen && <AICoach onClose={() => setIsChatOpen(false)} />}
+
+    </div>
+  );
+};
+
+const container = document.getElementById('root');
+const root = createRoot(container!);
+root.render(<App />);
