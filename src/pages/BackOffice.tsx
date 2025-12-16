@@ -92,6 +92,17 @@ const BackOffice = () => {
     };
 
     const updateRecipe = async (updatedRecipe: Recipe) => {
+        // Check for new tags and add them to DB (same logic as handleSaveRecipe in index.tsx)
+        const newTags = updatedRecipe.tags.filter(t => !availableTags.includes(t) && t !== 'Perso');
+        if (newTags.length > 0) {
+            for (const tag of newTags) {
+                // Insert into DB
+                await supabase.from('tags').insert({ name: tag }).select();
+            }
+            // Refresh available tags
+            setAvailableTags(prev => [...prev, ...newTags].sort());
+        }
+
         const dbRecipe = recipeToDbRecipeForUpdate(updatedRecipe);
 
         const { error } = await supabase
