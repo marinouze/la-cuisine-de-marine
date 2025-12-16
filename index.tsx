@@ -337,31 +337,43 @@ const TagSelector = ({ availableTags, selectedTags, onToggleTag, onAddNewTag }: 
     }
   };
 
+  // Separate available tags into unselected and selected
+  const unselectedTags = availableTags.filter(tag => !selectedTags.includes(tag));
+
   return (
     <div className="tag-selector">
-      <div className="tag-checkbox-list">
-        {availableTags.map(tag => (
-          <label key={tag} className="tag-checkbox-item">
-            <input
-              type="checkbox"
-              checked={selectedTags.includes(tag)}
-              onChange={() => onToggleTag(tag)}
-            />
-            <span>{tag}</span>
-          </label>
-        ))}
-      </div>
+      {/* Available tags as pills */}
+      {unselectedTags.length > 0 && (
+        <div style={{ marginBottom: '15px' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#888', marginBottom: '8px' }}>
+            Tags disponibles :
+          </div>
+          <div className="tag-pills-available">
+            {unselectedTags.map(tag => (
+              <button
+                key={tag}
+                type="button"
+                className="tag-pill-selectable"
+                onClick={() => onToggleTag(tag)}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
+      {/* Add new tag button/input */}
       {!showNewTagInput ? (
         <button
           type="button"
-          className="add-tag-btn"
+          className="add-tag-toggle-btn"
           onClick={() => setShowNewTagInput(true)}
         >
-          + Ajouter un tag
+          + Créer un nouveau tag
         </button>
       ) : (
-        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
           <input
             type="text"
             className="form-input"
@@ -370,23 +382,46 @@ const TagSelector = ({ availableTags, selectedTags, onToggleTag, onAddNewTag }: 
             onChange={(e) => setNewTagName(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSubmitNewTag())}
             autoFocus
+            style={{ flex: 1 }}
           />
           <button
             type="button"
-            className="btn-primary"
+            className="tag-confirm-btn"
             onClick={handleSubmitNewTag}
-            style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}
+            disabled={!newTagName.trim()}
           >
             OK
           </button>
           <button
             type="button"
-            className="btn-secondary"
+            className="tag-cancel-btn"
             onClick={() => { setShowNewTagInput(false); setNewTagName(''); }}
-            style={{ padding: '8px 16px' }}
           >
-            Annuler
+            ✕
           </button>
+        </div>
+      )}
+
+      {/* Selected tags display */}
+      {selectedTags.length > 0 && (
+        <div style={{ marginTop: '15px' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: '600', color: '#888', marginBottom: '8px' }}>
+            Tags sélectionnés :
+          </div>
+          <div className="tags-preview">
+            {selectedTags.map(tag => (
+              <div key={tag} className="preview-tag">
+                <span>{tag}</span>
+                <button
+                  type="button"
+                  onClick={() => onToggleTag(tag)}
+                  aria-label={`Retirer ${tag}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

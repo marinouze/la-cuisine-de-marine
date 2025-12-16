@@ -1030,6 +1030,89 @@
     border-radius: 12px;
 }
 
+/* Available tags as clickable pills */
+.tag-pills-available {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag-pill-selectable {
+    background: #fff;
+    border: 2px solid rgba(69, 123, 157, 0.3);
+    color: var(--accent-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Nunito', sans-serif;
+}
+
+.tag-pill-selectable:hover {
+    background: rgba(69, 123, 157, 0.1);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(69, 123, 157, 0.2);
+}
+
+.tag-pill-selectable:active {
+    transform: translateY(0);
+}
+
+/* Confirm and cancel buttons for new tag input */
+.tag-confirm-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(230, 57, 70, 0.3);
+}
+
+.tag-confirm-btn:hover:not(:disabled) {
+    background: #d32f3e;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(230, 57, 70, 0.4);
+}
+
+.tag-confirm-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.tag-confirm-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.tag-cancel-btn {
+    background: #f5f5f5;
+    color: #666;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1.1rem;
+}
+
+.tag-cancel-btn:hover {
+    background: #ffeeee;
+    color: var(--primary-color);
+}
+
+.tag-cancel-btn:active {
+    transform: scale(0.95);
+}
+
 .tag-checkbox-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

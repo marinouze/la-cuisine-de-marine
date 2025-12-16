@@ -10,7 +10,6 @@ export interface DbRecipe {
     servings: number;
     is_custom: boolean;
     status: 'draft' | 'published';
-    tags?: string[];
     created_at?: string;
     updated_at?: string;
 }
@@ -90,7 +89,7 @@ export function dbRecipeToRecipe(dbRecipe: DbRecipe, comments: DbComment[] = [])
         prepTime: dbRecipe.prep_time,
         cookTime: dbRecipe.cook_time,
         servings: dbRecipe.servings,
-        tags: dbRecipe.tags || [],
+        tags: [], // Tags will be populated separately from recipe_tags table
         isCustom: dbRecipe.is_custom,
         status: dbRecipe.status,
         comments: comments.map(dbCommentToComment)
@@ -106,7 +105,6 @@ export function recipeToDbRecipe(recipe: Omit<Recipe, 'id' | 'comments'>): Omit<
         prep_time: recipe.prepTime,
         cook_time: recipe.cookTime,
         servings: recipe.servings,
-        tags: recipe.tags || [],
         is_custom: recipe.isCustom || false,
         status: recipe.status || 'draft'
     };
@@ -122,7 +120,6 @@ export function recipeToDbRecipeForUpdate(recipe: Recipe): Partial<DbRecipe> {
         prep_time: recipe.prepTime,
         cook_time: recipe.cookTime,
         servings: recipe.servings,
-        tags: recipe.tags || [],
         is_custom: recipe.isCustom || false,
         status: recipe.status || 'draft'
     };
