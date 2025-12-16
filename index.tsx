@@ -33,6 +33,7 @@ interface Recipe {
   prepTime: string;
   cookTime: string;
   servings: number;
+  tags?: string[];
   isCustom?: boolean;
   comments?: Comment[];
 }
@@ -68,6 +69,26 @@ const SearchBar = ({ value, onChange }: SearchBarProps) => (
   </div>
 );
 
+interface FilterPillsProps {
+  allTags: string[];
+  selectedTags: string[];
+  onToggleTag: (tag: string) => void;
+}
+
+const FilterPills = ({ allTags, selectedTags, onToggleTag }: FilterPillsProps) => (
+  <div className="filter-pills-container">
+    {allTags.map(tag => (
+      <button
+        key={tag}
+        className={`filter-pill ${selectedTags.includes(tag) ? 'active' : ''}`}
+        onClick={() => onToggleTag(tag)}
+      >
+        {tag}
+      </button>
+    ))}
+  </div>
+);
+
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -90,6 +111,14 @@ const RecipeCard = ({ recipe, onClick, isYummed, onToggleYum }: RecipeCardProps)
           <span>🔥 {recipe.cookTime}</span>
           {Number(rating) > 0 && <span>⭐ {rating}</span>}
         </div>
+        {recipe.tags && recipe.tags.length > 0 && (
+          <div className="recipe-card-tags">
+            {recipe.tags.slice(0, 3).map(tag => (
+              <span key={tag} className="tag-pill-small">{tag}</span>
+            ))}
+            {recipe.tags.length > 3 && <span className="tag-pill-more">+{recipe.tags.length - 3}</span>}
+          </div>
+        )}
       </div>
       <div className="recipe-card-actions">
         <button
@@ -188,6 +217,13 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }: R
         </div>
 
         <h1 className="detail-title">{recipe.title}</h1>
+        {recipe.tags && recipe.tags.length > 0 && (
+          <div className="detail-tags">
+            {recipe.tags.map(tag => (
+              <span key={tag} className="tag-pill">{tag}</span>
+            ))}
+          </div>
+        )}
         {Number(avgRating) > 0 && (
           <div style={{ textAlign: 'center', marginBottom: '15px', fontWeight: 'bold', color: '#666' }}>
             Note moyenne : ⭐ {avgRating} / 5
@@ -280,14 +316,90 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }: R
   );
 };
 
+// --- Tag Selector Component ---
+
+interface TagSelectorProps {
+  availableTags: string[];
+  selectedTags: string[];
+  onToggleTag: (tag: string) => void;
+  onAddNewTag: (tagName: string) => void;
+}
+
+const TagSelector = ({ availableTags, selectedTags, onToggleTag, onAddNewTag }: TagSelectorProps) => {
+  const [showNewTagModal, setShowNewTagModal] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+
+  const handleSubmitNewTag = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newTagName.trim()) {
+      onAddNewTag(newTagName.trim());
+      setNewTagName("");
+      setShowNewTagModal(false);
+    }
+  };
+
+  return (
+    <div className="tag-selector">
+      <div className="tag-checkbox-list">
+        {availableTags.map(tag => (
+          <label key={tag} className="tag-checkbox-item">
+            <input
+              type="checkbox"
+              checked={selectedTags.includes(tag)}
+              onChange={() => onToggleTag(tag)}
+            />
+            <span>{tag}</span>
+          </label>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="add-tag-btn"
+        onClick={() => setShowNewTagModal(true)}
+      >
+        + Ajouter un tag
+      </button>
+
+      {showNewTagModal && (
+        <div className="modal-overlay" onClick={() => setShowNewTagModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Créer un nouveau tag</h3>
+            <form onSubmit={handleSubmitNewTag}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Nom du tag..."
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                autoFocus
+                required
+              />
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowNewTagModal(false)}>
+                  Annuler
+                </button>
+                <button type="submit" className="btn-primary">
+                  Créer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Add Recipe Form Component ---
 
 interface AddRecipeFormProps {
   onSave: (recipe: Recipe) => void;
   onCancel: () => void;
+  availableTags: string[];
+  onTagsUpdate: () => void;
 }
 
-const AddRecipeForm = ({ onSave, onCancel }: AddRecipeFormProps) => {
+const AddRecipeForm = ({ onSave, onCancel, availableTags, onTagsUpdate }: AddRecipeFormProps) => {
   const [title, setTitle] = useState("");
   const [prepTime, setPrepTime] = useState("");
   const [cookTime, setCookTime] = useState("");
@@ -300,6 +412,9 @@ const AddRecipeForm = ({ onSave, onCancel }: AddRecipeFormProps) => {
 
   // Steps
   const [steps, setSteps] = useState<string[]>([""]);
+
+  // Tags
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const handleAddIngredient = () => {
     setIngredients([...ingredients, { qty: "", unit: "", name: "" }]);
@@ -329,6 +444,22 @@ const AddRecipeForm = ({ onSave, onCancel }: AddRecipeFormProps) => {
     setSteps(steps.filter((_, i) => i !== index));
   };
 
+  const handleToggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleAddNewTag = async (tagName: string) => {
+    // Add to selected tags immediately
+    if (!selectedTags.includes(tagName)) {
+      setSelectedTags(prev => [...prev, tagName]);
+    }
+    // Save to database (will be called from parent to refresh available tags)
+    await saveTagToDB(tagName);
+    onTagsUpdate();
+  };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -351,6 +482,7 @@ const AddRecipeForm = ({ onSave, onCancel }: AddRecipeFormProps) => {
       prepTime: prepTime || "10 min",
       cookTime: cookTime || "15 min",
       servings,
+      tags: selectedTags,
       isCustom: true,
       comments: []
     };
@@ -446,6 +578,16 @@ const AddRecipeForm = ({ onSave, onCancel }: AddRecipeFormProps) => {
           <button type="button" className="add-btn" onClick={handleAddStep}>+ Ajouter une étape</button>
         </div>
 
+        <div className="form-section">
+          <label className="form-label">Tags</label>
+          <TagSelector
+            availableTags={availableTags}
+            selectedTags={selectedTags}
+            onToggleTag={handleToggleTag}
+            onAddNewTag={handleAddNewTag}
+          />
+        </div>
+
 
         <button type="submit" className="submit-btn">ENREGISTRER LA RECETTE ✨</button>
 
@@ -458,6 +600,95 @@ const AddRecipeForm = ({ onSave, onCancel }: AddRecipeFormProps) => {
 
 
 // --- Database Helper Functions ---
+
+// Fetch all tags from Supabase
+async function fetchTagsFromDB(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('name')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map(tag => tag.name);
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+}
+
+// Save a new tag to Supabase
+async function saveTagToDB(tagName: string, createdBy?: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('tags')
+      .insert([{ name: tagName, created_by: createdBy || 'user' }]);
+
+    if (error) {
+      // Tag might already exist (unique constraint)
+      if (error.code === '23505') {
+        return true; // Tag already exists, that's fine
+      }
+      throw error;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error saving tag:', error);
+    return false;
+  }
+}
+
+// Link tags to a recipe via recipe_tags junction table
+async function linkTagsToRecipe(recipeId: number, tagNames: string[]): Promise<boolean> {
+  try {
+    // First, get tag IDs from tag names
+    const { data: tagsData, error: tagsError } = await supabase
+      .from('tags')
+      .select('id, name')
+      .in('name', tagNames);
+
+    if (tagsError) throw tagsError;
+    if (!tagsData || tagsData.length === 0) return true; // No tags to link
+
+    // Delete existing tag associations for this recipe
+    await supabase
+      .from('recipe_tags')
+      .delete()
+      .eq('recipe_id', recipeId);
+
+    // Insert new tag associations
+    const recipeTags = tagsData.map(tag => ({
+      recipe_id: recipeId,
+      tag_id: tag.id
+    }));
+
+    const { error: insertError } = await supabase
+      .from('recipe_tags')
+      .insert(recipeTags);
+
+    if (insertError) throw insertError;
+    return true;
+  } catch (error) {
+    console.error('Error linking tags to recipe:', error);
+    return false;
+  }
+}
+
+// Fetch recipe tags from the junction table
+async function fetchRecipeTagsFromDB(recipeId: number): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('recipe_tags')
+      .select('tag_id, tags!inner(name)')
+      .eq('recipe_id', recipeId);
+
+    if (error) throw error;
+    return (data || []).map((rt: any) => rt.tags.name);
+  } catch (error) {
+    console.error('Error fetching recipe tags:', error);
+    return [];
+  }
+}
 
 // Fetch all recipes with their comments from Supabase
 async function fetchRecipesFromDB(): Promise<Recipe[]> {
@@ -481,16 +712,32 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
     if (commentsError) throw commentsError;
 
     // Group comments by recipe_id
-    const commentsByRecipe = new Map<number, DbComment[]>();
+    const commentsByRecipe = new Map<number, DbComment>();
     (commentsData || []).forEach(comment => {
       const existing = commentsByRecipe.get(comment.recipe_id) || [];
       commentsByRecipe.set(comment.recipe_id, [...existing, comment]);
     });
 
+    // Fetch all recipe tags
+    const { data: recipeTagsData, error: recipeTagsError } = await supabase
+      .from('recipe_tags')
+      .select('recipe_id, tags!inner(name)');
+
+    if (recipeTagsError) console.error('Error fetching recipe tags:', recipeTagsError);
+
+    // Group tags by recipe_id
+    const tagsByRecipe = new Map<number, string[]>();
+    (recipeTagsData || []).forEach((rt: any) => {
+      const existing = tagsByRecipe.get(rt.recipe_id) || [];
+      tagsByRecipe.set(rt.recipe_id, [...existing, rt.tags.name]);
+    });
+
     // Transform to Recipe format
-    return recipesData.map(dbRecipe =>
-      dbRecipeToRecipe(dbRecipe as DbRecipe, commentsByRecipe.get(dbRecipe.id) || [])
-    );
+    return recipesData.map(dbRecipe => {
+      const recipe = dbRecipeToRecipe(dbRecipe as DbRecipe, commentsByRecipe.get(dbRecipe.id) || []);
+      recipe.tags = tagsByRecipe.get(dbRecipe.id) || [];
+      return recipe;
+    });
   } catch (error) {
     console.error('Error fetching recipes:', error);
     return [];
@@ -512,7 +759,20 @@ async function saveRecipeToDB(recipe: Omit<Recipe, 'id' | 'comments'>): Promise<
     if (error) throw error;
     if (!data) return null;
 
-    return dbRecipeToRecipe(data as DbRecipe, []);
+    // Save tags if present
+    if (recipe.tags && recipe.tags.length > 0) {
+      // First, ensure all tags exist in the database
+      for (const tagName of recipe.tags) {
+        await saveTagToDB(tagName);
+      }
+
+      // Then link the tags to the recipe
+      await linkTagsToRecipe(data.id, recipe.tags);
+    }
+
+    const newRecipe = dbRecipeToRecipe(data as DbRecipe, []);
+    newRecipe.tags = recipe.tags || [];
+    return newRecipe;
   } catch (error) {
     console.error('Error saving recipe:', error);
     return null;
@@ -548,6 +808,7 @@ async function addCommentToDB(recipeId: number, comment: Omit<Comment, 'id'>): P
 
 const App = () => {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
@@ -555,23 +816,28 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [yums, setYums] = useState<number[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom'>('all'); // 'all', 'yums', 'custom'
+  const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]); // For tag filtering
 
-  // Fetch recipes from Supabase on mount
+  // Fetch recipes and tags from Supabase on mount
   useEffect(() => {
-    async function loadRecipes() {
+    async function loadData() {
       setIsLoading(true);
       setError(null);
       try {
-        const recipes = await fetchRecipesFromDB();
+        const [recipes, tags] = await Promise.all([
+          fetchRecipesFromDB(),
+          fetchTagsFromDB()
+        ]);
         setAllRecipes(recipes);
+        setAllTags(tags);
       } catch (err) {
-        console.error('Failed to load recipes:', err);
+        console.error('Failed to load data:', err);
         setError('Impossible de charger les recettes. Vérifiez votre connexion.');
       } finally {
         setIsLoading(false);
       }
     }
-    loadRecipes();
+    loadData();
   }, []);
 
 
@@ -579,6 +845,17 @@ const App = () => {
     setYums(prev =>
       prev.includes(id) ? prev.filter(y => y !== id) : [...prev, id]
     );
+  };
+
+  const handleTagFilterToggle = (tag: string) => {
+    setSelectedFilterTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const refreshTags = async () => {
+    const tags = await fetchTagsFromDB();
+    setAllTags(tags);
   };
 
 
@@ -617,7 +894,13 @@ const App = () => {
     if (filterType === 'yums') matchesFilter = yums.includes(r.id);
     if (filterType === 'custom') matchesFilter = !!r.isCustom;
 
-    return matchesSearch && matchesFilter;
+    // Tag filtering: show recipes that have ANY of the selected tags
+    let matchesTags = true;
+    if (selectedFilterTags.length > 0) {
+      matchesTags = r.tags?.some(tag => selectedFilterTags.includes(tag)) || false;
+    }
+
+    return matchesSearch && matchesFilter && matchesTags;
   });
 
   const selectedRecipe = allRecipes.find(r => r.id === selectedRecipeId);
@@ -661,7 +944,12 @@ const App = () => {
       {!isLoading && !error && (
         <>
           {isAddMode ? (
-            <AddRecipeForm onSave={handleSaveRecipe} onCancel={() => setIsAddMode(false)} />
+            <AddRecipeForm
+              onSave={handleSaveRecipe}
+              onCancel={() => setIsAddMode(false)}
+              availableTags={allTags}
+              onTagsUpdate={refreshTags}
+            />
           ) : !selectedRecipe ? (
             <div className="list-view fade-in">
               <header className="main-header">
@@ -670,6 +958,14 @@ const App = () => {
               </header>
 
               <SearchBar value={searchTerm} onChange={setSearchTerm} />
+
+              {allTags.length > 0 && (
+                <FilterPills
+                  allTags={allTags}
+                  selectedTags={selectedFilterTags}
+                  onToggleTag={handleTagFilterToggle}
+                />
+              )}
 
               <div className="filter-tabs">
                 <button

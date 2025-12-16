@@ -10,6 +10,7 @@ export interface DbRecipe {
     servings: number;
     is_custom: boolean;
     status: 'draft' | 'published';
+    tags?: string[];
     created_at?: string;
     updated_at?: string;
 }
@@ -20,6 +21,13 @@ export interface DbIngredient {
     quantity: number | null;
     unit: string;
     ingredient: string;
+}
+
+export interface DbTag {
+    id: number;
+    name: string;
+    created_at?: string;
+    created_by?: string;
 }
 
 export interface DbComment {
@@ -57,9 +65,17 @@ export interface Recipe {
     prepTime: string;
     cookTime: string;
     servings: number;
+    tags?: string[];
     isCustom?: boolean;
     status?: 'draft' | 'published';
     comments?: Comment[];
+}
+
+export interface Tag {
+    id: number;
+    name: string;
+    createdAt?: string;
+    createdBy?: string;
 }
 
 
@@ -74,6 +90,7 @@ export function dbRecipeToRecipe(dbRecipe: DbRecipe, comments: DbComment[] = [])
         prepTime: dbRecipe.prep_time,
         cookTime: dbRecipe.cook_time,
         servings: dbRecipe.servings,
+        tags: dbRecipe.tags || [],
         isCustom: dbRecipe.is_custom,
         status: dbRecipe.status,
         comments: comments.map(dbCommentToComment)
@@ -89,6 +106,7 @@ export function recipeToDbRecipe(recipe: Omit<Recipe, 'id' | 'comments'>): Omit<
         prep_time: recipe.prepTime,
         cook_time: recipe.cookTime,
         servings: recipe.servings,
+        tags: recipe.tags || [],
         is_custom: recipe.isCustom || false,
         status: recipe.status || 'draft'
     };
@@ -104,6 +122,7 @@ export function recipeToDbRecipeForUpdate(recipe: Recipe): Partial<DbRecipe> {
         prep_time: recipe.prepTime,
         cook_time: recipe.cookTime,
         servings: recipe.servings,
+        tags: recipe.tags || [],
         is_custom: recipe.isCustom || false,
         status: recipe.status || 'draft'
     };
@@ -126,5 +145,21 @@ export function commentToDbComment(comment: Omit<Comment, 'id'>, recipeId: numbe
         rating: comment.rating,
         text: comment.text,
         date: comment.date
+    };
+}
+
+export function dbTagToTag(dbTag: DbTag): Tag {
+    return {
+        id: dbTag.id,
+        name: dbTag.name,
+        createdAt: dbTag.created_at,
+        createdBy: dbTag.created_by
+    };
+}
+
+export function tagToDbTag(tag: Omit<Tag, 'id' | 'createdAt'>): Omit<DbTag, 'id' | 'created_at'> {
+    return {
+        name: tag.name,
+        created_by: tag.createdBy
     };
 }

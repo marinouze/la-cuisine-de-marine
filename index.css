@@ -990,3 +990,159 @@
 .chat-send-btn:disabled {
     background: #ccc;
 }
+/* --- Tag-related Styles --- */
+
+/* Tag pills for display on cards and detail pages */
+.tag-pill {
+    background: linear-gradient(135deg, rgba(69, 123, 157, 0.15), rgba(69, 123, 157, 0.25));
+    color: var(--accent-color);
+    padding: 6px 14px;
+    border-radius: 18px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid rgba(69, 123, 157, 0.3);
+    display: inline-block;
+}
+
+/* Small tag pills for recipe cards */
+.tag-pill-small {
+    background: rgba(69, 123, 157, 0.1);
+    color: var(--accent-color);
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.tag-pill-more {
+    background: rgba(0, 0, 0, 0.05);
+    color: #888;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+/* Tag selector component */
+.tag-selector {
+    border-radius: 12px;
+}
+
+.tag-checkbox-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    background: #fafafa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.tag-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+}
+
+.tag-checkbox-item:hover {
+    background: rgba(69, 123, 157, 0.1);
+}
+
+.tag-checkbox-item input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-color);
+}
+
+.tag-checkbox-item span {
+    flex: 1;
+    color: #555;
+    font-weight: 600;
+}
+
+/* Modal styles for new tag creation */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+    animation: slideUp 0.3s ease-out;
+}
+
+.modal-content h3 {
+    font-family: 'Nunito', sans-serif;
+    color: var(--text-color);
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    flex: 1;
+    transition: transform 0.2s;
+}
+
+.btn-primary:active {
+    transform: scale(0.95);
+}
+
+.btn-secondary {
+    background: #eee;
+    color: #666;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    flex: 1;
+    transition: transform 0.2s;
+}
+
+.btn-secondary:active {
+    transform: scale(0.95);
+}
