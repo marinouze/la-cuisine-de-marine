@@ -180,6 +180,11 @@ const BackOffice = () => {
         }
     };
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/login');
+    };
+
 
 
     if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Chargement...</div>;
@@ -188,9 +193,14 @@ const BackOffice = () => {
         <div className="backoffice-container fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <h1 style={{ fontFamily: 'Pacifico, cursive', color: 'var(--primary-color)', margin: 0 }}>Admin des Recettes</h1>
-                <button onClick={() => navigate('/')} style={{ background: 'none', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer' }}>
-                    Retour au site
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => navigate('/')} style={{ background: 'none', border: '1px solid #ccc', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer' }}>
+                        Retour au site
+                    </button>
+                    <button onClick={handleLogout} style={{ background: '#ffebee', border: '1px solid #c62828', color: '#c62828', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold' }}>
+                        Déconnexion
+                    </button>
+                </div>
             </header>
 
             <div className="tabs" style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '2px solid #eee' }}>

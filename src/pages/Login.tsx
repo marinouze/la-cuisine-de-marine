@@ -13,6 +13,13 @@ const Login: React.FC = () => {
         setLoading(true);
         setMessage('');
 
+        // Restrict login to admin email only
+        if (email !== 'aboo2003@hotmail.com') {
+            setMessage('Accès refusé. Seul l\'administrateur peut se connecter.');
+            setLoading(false);
+            return;
+        }
+
         try {
             const { error } = await supabase.auth.signInWithOtp({ email });
             if (error) throw error;
