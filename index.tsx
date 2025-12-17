@@ -108,6 +108,9 @@ const RecipeCard = ({ recipe, onClick, isYummed, onToggleYum }: RecipeCardProps)
 
   return (
     <div className="recipe-card" onClick={onClick}>
+      {recipe.status === 'draft' && (
+        <div className="recipe-draft-badge">En attente de publication</div>
+      )}
       <img src={imageUrl} alt={recipe.title} className="recipe-card-thumb" loading="lazy" />
       <div className="recipe-card-info">
         <h3 className="recipe-card-title">{recipe.title}</h3>
@@ -465,7 +468,7 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags, user, initialRecipe }:
       servings,
       tags: selectedTags,
       isCustom: true,
-      status: initialRecipe?.status || 'published',
+      status: initialRecipe?.status || 'draft', // New recipes are draft by default
       userId: initialRecipe?.userId || user?.id, // Preserve original owner if editing (though usually only owner edits)
       comments: initialRecipe?.comments || []
     };

@@ -5,7 +5,7 @@ import { dbRecipeToRecipe, recipeToDbRecipeForUpdate, type Recipe, type DbRecipe
 import RecipeEditForm from '../components/RecipeEditForm';
 
 const BackOffice = () => {
-    const [activeTab, setActiveTab] = useState<'recipes' | 'tags'>('recipes');
+    const [activeTab, setActiveTab] = useState<'recipes' | 'pending' | 'tags'>('pending'); // Start with pending tab
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [tags, setTags] = useState<{ id: number; name: string }[]>([]);
     const [loading, setLoading] = useState(true);
@@ -281,6 +281,20 @@ const BackOffice = () => {
 
             <div className="tabs" style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '2px solid #eee' }}>
                 <button
+                    onClick={() => setActiveTab('pending')}
+                    style={{
+                        padding: '10px 20px',
+                        border: 'none',
+                        fontWeight: 'bold',
+                        background: 'none',
+                        color: activeTab === 'pending' ? 'var(--primary-color)' : '#888',
+                        borderBottom: activeTab === 'pending' ? '2px solid var(--primary-color)' : 'none',
+                        cursor: 'pointer'
+                    }}
+                >
+                    ⏳ En attente ({recipes.filter(r => r.status === 'draft').length})
+                </button>
+                <button
                     onClick={() => setActiveTab('recipes')}
                     style={{
                         padding: '10px 20px',
@@ -292,7 +306,7 @@ const BackOffice = () => {
                         cursor: 'pointer'
                     }}
                 >
-                    Recettes ({recipes.length})
+                    Recettes ({recipes.filter(r => r.status === 'published').length})
                 </button>
                 <button
                     onClick={() => setActiveTab('tags')}
@@ -310,6 +324,71 @@ const BackOffice = () => {
                 </button>
             </div>
 
+            {activeTab === 'pending' && (
+                <div className="pending-recipes">
+                    <h2 style={{ marginBottom: '20px', color: '#ff6b35' }}>Recettes en attente de publication</h2>
+                    {recipes.filter(r => r.status === 'draft').length === 0 ? (
+                        <p style={{ padding: '40px', textAlign: 'center', color: '#999', background: 'white', borderRadius: '8px' }}>
+                            Aucune recette en attente ! 🎉
+                        </p>
+                    ) : (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
+                            <thead style={{ background: '#fff3e0' }}>
+                                <tr>
+                                    <th style={{ padding: '15px', textAlign: 'left' }}>Titre</th>
+                                    <th style={{ padding: '15px', textAlign: 'left' }}>Auteur</th>
+                                    <th style={{ padding: '15px', textAlign: 'left' }}>ID</th>
+                                    <th style={{ padding: '15px', textAlign: 'right' }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recipes.filter(r => r.status === 'draft').map(recipe => (
+                                    <tr key={recipe.id} style={{ borderBottom: '1px solid #eee' }}>
+                                        <td style={{ padding: '15px', fontWeight: 'bold' }}>{recipe.title}</td>
+                                        <td style={{ padding: '15px', color: '#666' }}>
+                                            {recipe.authorUsername || 'Anonyme'}
+                                        </td>
+                                        <td style={{ padding: '15px', fontSize: '0.9rem', color: '#999' }}>
+                                            #{recipe.id}
+                                        </td>
+                                        <td style={{ padding: '15px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                            <button
+                                                onClick={() => toggleRecipeStatus(recipe)}
+                                                style={{
+                                                    padding: '8px 16px',
+                                                    borderRadius: '6px',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                                                }}
+                                            >
+                                                ✓ Publier
+                                            </button>
+                                            <button
+                                                onClick={() => deleteRecipe(recipe.id)}
+                                                style={{
+                                                    padding: '8px 16px',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #ccc',
+                                                    cursor: 'pointer',
+                                                    background: 'white',
+                                                    color: '#d32f2f'
+                                                }}
+                                            >
+                                                🗑 Rejeter
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            )}
+
             {activeTab === 'recipes' && (
                 <div>
                     {editMode === 'list' ? (
@@ -319,12 +398,12 @@ const BackOffice = () => {
                                     <tr>
                                         <th style={{ padding: '15px', textAlign: 'left' }}>Titre</th>
                                         <th style={{ padding: '15px', textAlign: 'left' }}>Status</th>
-                                        <th style={{ padding: '15px', textAlign: 'left' }}>Date</th>
+                                        <th style={{ padding: '15px', textAlign: 'left' }}>ID</th>
                                         <th style={{ padding: '15px', textAlign: 'right' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {recipes.map(recipe => (
+                                    {recipes.filter(r => r.status === 'published').map(recipe => (
                                         <tr key={recipe.id} style={{ borderBottom: '1px solid #eee' }}>
                                             <td style={{ padding: '15px', fontWeight: 'bold' }}>{recipe.title}</td>
                                             <td style={{ padding: '15px' }}>
