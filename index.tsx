@@ -1169,7 +1169,11 @@ const App = () => {
                         ? "Vous n'avez pas encore de Miams ! Ajoutez-en ❤️"
                         : filterType === 'custom'
                           ? "Pas encore de créations ! Lancez-vous 🍳"
-                          : `Aucune recette trouvée pour "${searchTerm}"`}
+                          : filterType === 'my_creations'
+                            ? 'Aucune recette trouvée pour "Mes créations"'
+                            : searchTerm
+                              ? `Aucune recette trouvée pour "${searchTerm}"`
+                              : "Aucune recette trouvée"}
                     </p>
                   </div>
                 )}
