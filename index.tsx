@@ -111,6 +111,9 @@ const RecipeCard = ({ recipe, onClick, isYummed, onToggleYum }: RecipeCardProps)
       <img src={imageUrl} alt={recipe.title} className="recipe-card-thumb" loading="lazy" />
       <div className="recipe-card-info">
         <h3 className="recipe-card-title">{recipe.title}</h3>
+        {recipe.authorUsername && (
+          <p className="recipe-card-author">une recette de {recipe.authorUsername}</p>
+        )}
         <div className="recipe-card-meta">
           <span>⏱️ {recipe.prepTime}</span>
           <span>🔥 {recipe.cookTime}</span>
@@ -260,6 +263,9 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, cur
         </div>
 
         <h1 className="detail-title">{recipe.title}</h1>
+        {recipe.authorUsername && (
+          <p className="recipe-detail-author">une recette de {recipe.authorUsername}</p>
+        )}
         {recipe.tags && recipe.tags.length > 0 && (
           <div className="detail-tags">
             {recipe.tags.map(tag => (
@@ -657,10 +663,13 @@ async function linkTagsToRecipe(recipeId: number, tagNames: string[]): Promise<b
 // Fetch all recipes with their comments from Supabase
 async function fetchRecipesFromDB(): Promise<Recipe[]> {
   try {
-    // Fetch recipes
+    // Fetch recipes with author username
     const { data: recipesData, error: recipesError } = await supabase
       .from('recipes')
-      .select('*')
+      .select(`
+        *,
+        profiles:user_id (username)
+      `)
       .eq('status', 'published') // Only fetch published recipes for the main app
       .order('created_at', { ascending: false });
 
@@ -703,6 +712,8 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
     return recipesData.map(dbRecipe => {
       const recipe = dbRecipeToRecipe(dbRecipe as DbRecipe, commentsByRecipe.get(dbRecipe.id) || []);
       recipe.tags = tagsByRecipe.get(dbRecipe.id) || [];
+      // Extract author username from joined profile data
+      recipe.authorUsername = (dbRecipe as any).profiles?.username;
       return recipe;
     });
   } catch (error) {

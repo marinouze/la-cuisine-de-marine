@@ -78,6 +78,7 @@ export interface Recipe {
     isCustom?: boolean;
     status?: 'draft' | 'published';
     userId?: string;
+    authorUsername?: string;
     comments?: Comment[];
 }
 

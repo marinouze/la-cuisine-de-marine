@@ -233,6 +233,14 @@
     line-height: 1.2;
 }
 
+.recipe-card-author {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.75rem;
+    color: #999;
+    font-style: italic;
+    margin: -4px 0 8px 0;
+}
+
 .recipe-card-meta {
     display: flex;
     gap: 12px;
@@ -370,6 +378,15 @@
     color: var(--primary-color);
     margin: 80px 20px 10px 20px;
     line-height: 1.2;
+}
+
+.recipe-detail-author {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    margin: -5px 20px 20px 20px;
 }
 
 .detail-tags {
