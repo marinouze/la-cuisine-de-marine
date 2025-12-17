@@ -207,7 +207,7 @@
 .burger-menu-user-info {
     padding: 1rem;
     color: #666;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     border-bottom: 1px solid #f0f0f0;
     background: linear-gradient(to bottom, #fafafa, #ffffff);
     border-radius: 16px 16px 0 0;
@@ -215,10 +215,8 @@
 }
 
 .burger-menu-user-info strong {
-    color: var(--primary-color);
-    display: block;
-    margin-top: 0.25rem;
-    font-size: 0.95rem;
+    color: #666;
+    font-weight: 700;
 }
 
 .burger-menu-item {
