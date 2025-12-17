@@ -189,6 +189,8 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, cur
   const [newCommentText, setNewCommentText] = useState("");
   const [newCommentRating, setNewCommentRating] = useState(0);
   const [honeypot, setHoneypot] = useState(""); // Anti-bot honeypot field
+  const [lastCommentTime, setLastCommentTime] = useState<number>(0); // Rate limiting
+  const [rateLimitMessage, setRateLimitMessage] = useState(""); // Rate limit feedback
 
   // Check if user is owner or admin
   const isAdmin = userRole === 'admin';
@@ -198,13 +200,23 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, cur
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Honeypot: If this field is filled, it's a bot
+    // 1. Honeypot: If this field is filled, it's a bot
     if (honeypot !== '') {
       console.warn('Bot detected - honeypot triggered');
       return;
     }
 
+    // 2. Rate limiting - prevent spam (30 seconds between comments)
+    const now = Date.now();
+    if (now - lastCommentTime < 30000) {
+      const waitTime = Math.ceil((30000 - (now - lastCommentTime)) / 1000);
+      setRateLimitMessage(`Veuillez attendre ${waitTime} secondes avant d'ajouter un autre commentaire.`);
+      return;
+    }
+
     if (newCommentName && newCommentText && newCommentRating > 0) {
+      setLastCommentTime(now);
+      setRateLimitMessage(""); // Clear any previous message
       onAddComment(recipe.id, {
         user: newCommentName,
         text: newCommentText,
@@ -355,13 +367,28 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, cur
                 left: '-9999px',
                 width: '1px',
                 height: '1px',
+```
                 opacity: 0
               }}
               tabIndex={-1}
               autoComplete="off"
             />
-
-            <div className="form-group">
+            
+            {/* Rate limit message */}
+            {rateLimitMessage && (
+              <div style={{
+                padding: '10px',
+                marginBottom: '15px',
+                background: '#fff3e0',
+                color: '#ef6c00',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                textAlign: 'center'
+              }}>
+                {rateLimitMessage}
+              </div>
+            )}
+             <div className="form-group">
               <input
                 className="comment-input"
                 placeholder="Votre nom"
@@ -1075,256 +1102,256 @@ const App = () => {
       console.log(`❌ Filtered out: "${r.title}" - search:${matchesSearch} filter:${matchesFilter} tags:${matchesTags}`);
     }
 
-    return passes;
+                    return passes;
   });
 
-  console.log('✅ AFTER FILTER:', filteredRecipes.length, 'recipes');
+                    console.log('✅ AFTER FILTER:', filteredRecipes.length, 'recipes');
 
   const selectedRecipe = allRecipes.find(r => r.id === selectedRecipeId);
 
-  return (
-    <div className="app-container">
-      {/* Loading State */}
-      {isLoading && (
-        <div className="loading-state" style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          fontSize: '1.5rem',
-          color: 'var(--primary-color)'
-        }}>
-          <div>🍳 Chargement des recettes...</div>
-        </div>
-      )}
+                    return (
+                    <div className="app-container">
+                      {/* Loading State */}
+                      {isLoading && (
+                        <div className="loading-state" style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          height: '100vh',
+                          fontSize: '1.5rem',
+                          color: 'var(--primary-color)'
+                        }}>
+                          <div>🍳 Chargement des recettes...</div>
+                        </div>
+                      )}
 
-      {/* Error State */}
-      {error && (
-        <div className="error-state" style={{
-          padding: '20px',
-          textAlign: 'center',
-          color: '#d32f2f'
-        }}>
-          <p>{error}</p>
-          <button onClick={() => window.location.reload()} style={{
-            marginTop: '10px',
-            padding: '10px 20px',
-            background: 'var(--primary-color)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer'
-          }}>Réessayer</button>
-        </div>
-      )}
+                      {/* Error State */}
+                      {error && (
+                        <div className="error-state" style={{
+                          padding: '20px',
+                          textAlign: 'center',
+                          color: '#d32f2f'
+                        }}>
+                          <p>{error}</p>
+                          <button onClick={() => window.location.reload()} style={{
+                            marginTop: '10px',
+                            padding: '10px 20px',
+                            background: 'var(--primary-color)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer'
+                          }}>Réessayer</button>
+                        </div>
+                      )}
 
-      {!isLoading && !error && (
-        <>
-          {isAddMode ? (
-            <AddRecipeForm
-              onSave={handleSaveRecipe}
-              onCancel={() => {
-                setIsAddMode(false);
-                setEditingRecipe(null);
-              }}
-              availableTags={allTags}
-              user={user}
-              initialRecipe={editingRecipe || undefined}
-            />
-          ) : !selectedRecipe ? (
-            <div className="list-view fade-in">
-              <header className="main-header">
-                <h1 className="main-title">Mes Recettes</h1>
+                      {!isLoading && !error && (
+                        <>
+                          {isAddMode ? (
+                            <AddRecipeForm
+                              onSave={handleSaveRecipe}
+                              onCancel={() => {
+                                setIsAddMode(false);
+                                setEditingRecipe(null);
+                              }}
+                              availableTags={allTags}
+                              user={user}
+                              initialRecipe={editingRecipe || undefined}
+                            />
+                          ) : !selectedRecipe ? (
+                            <div className="list-view fade-in">
+                              <header className="main-header">
+                                <h1 className="main-title">Mes Recettes</h1>
 
-                {/* Burger menu icon - visible on mobile */}
-                <button
-                  className="burger-menu-icon"
-                  onClick={() => setIsBurgerMenuOpen(!isBurgerMenuOpen)}
-                  aria-label="Menu"
-                >
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </button>
+                                {/* Burger menu icon - visible on mobile */}
+                                <button
+                                  className="burger-menu-icon"
+                                  onClick={() => setIsBurgerMenuOpen(!isBurgerMenuOpen)}
+                                  aria-label="Menu"
+                                >
+                                  <span></span>
+                                  <span></span>
+                                  <span></span>
+                                </button>
 
-                {/* Burger menu dropdown - visible on mobile when open */}
-                {isBurgerMenuOpen && (
-                  <div className="burger-menu-dropdown">
-                    {user && userProfile && (
-                      <div className="burger-menu-user-info">
-                        Tu es connecté•e, <strong>{userProfile.username || userProfile.email}</strong>
-                      </div>
-                    )}
-                    {user ? (
+                                {/* Burger menu dropdown - visible on mobile when open */}
+                                {isBurgerMenuOpen && (
+                                  <div className="burger-menu-dropdown">
+                                    {user && userProfile && (
+                                      <div className="burger-menu-user-info">
+                                        Tu es connecté•e, <strong>{userProfile.username || userProfile.email}</strong>
+                                      </div>
+                                    )}
+                                    {user ? (
+                                      <button
+                                        className="burger-menu-item"
+                                        onClick={async () => {
+                                          await supabase.auth.signOut();
+                                          window.location.reload();
+                                        }}
+                                      >
+                                        Déconnexion
+                                      </button>
+                                    ) : (
+                                      <button
+                                        className="burger-menu-item"
+                                        onClick={() => {
+                                          window.location.href = '/login';
+                                        }}
+                                      >
+                                        Connexion
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Desktop buttons */}
+                                <div className="desktop-auth-buttons">
+                                  {user && userProfile && (
+                                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                                      Tu es connecté•e, <strong>{userProfile.username || userProfile.email}</strong>
+                                    </span>
+                                  )}
+                                  {user ? (
+                                    <button
+                                      className="logout-btn-header"
+                                      onClick={async () => {
+                                        await supabase.auth.signOut();
+                                        window.location.reload();
+                                      }}
+                                    >
+                                      Déconnexion
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="login-btn-header"
+                                      onClick={() => {
+                                        window.location.href = '/login';
+                                      }}
+                                    >
+                                      Connexion
+                                    </button>
+                                  )}
+                                </div>
+                              </header>
+
+                              <SearchBar value={searchTerm} onChange={setSearchTerm} />
+
+                              {allTags.length > 0 && (
+                                <FilterPills
+                                  allTags={allTags}
+                                  selectedTags={selectedFilterTags}
+                                  onToggleTag={handleTagFilterToggle}
+                                />
+                              )}
+
+                              <div className="filter-tabs">
+                                <button
+                                  className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
+                                  onClick={() => setFilterType('all')}
+                                >
+                                  Toutes
+                                </button>
+                                <button
+                                  className={`filter-tab ${filterType === 'yums' ? 'active' : ''}`}
+                                  onClick={() => setFilterType('yums')}
+                                >
+                                  Mes Miams ❤️
+                                </button>
+                                <button
+                                  className={`filter-tab ${filterType === 'my_creations' ? 'active' : ''}`}
+                                  onClick={() => setFilterType('my_creations')}
+                                >
+                                  Mes Créations 🎨
+                                </button>
+                              </div>
+
+                              <div className="recipe-list">
+                                {filteredRecipes.length > 0 ? (
+                                  filteredRecipes.map(recipe => (
+                                    <RecipeCard
+                                      key={recipe.id}
+                                      recipe={recipe}
+                                      onClick={() => setSelectedRecipeId(recipe.id)}
+                                      isYummed={yums.includes(recipe.id)}
+                                      onToggleYum={toggleYum}
+                                    />
+                                  ))
+                                ) : (
+                                  <div className="empty-state">
+                                    <p>
+                                      {filterType === 'yums'
+                                        ? "Vous n'avez pas encore de Miams ! Ajoutez-en ❤️"
+                                        : filterType === 'custom'
+                                          ? "Pas encore de créations ! Lancez-vous 🍳"
+                                          : filterType === 'my_creations'
+                                            ? 'Aucune recette trouvée pour "Mes créations"'
+                                            : searchTerm
+                                              ? `Aucune recette trouvée pour "${searchTerm}"`
+                                              : "Aucune recette trouvée"}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <RecipeDetail
+                              recipe={selectedRecipe}
+                              onBack={() => setSelectedRecipeId(null)}
+                              isYummed={selectedRecipe ? yums.includes(selectedRecipe.id) : false}
+                              onToggleYum={selectedRecipe ? toggleYum : () => { }}
+                              onAddComment={handleAddComment}
+                              currentUser={user}
+                              onEdit={handleEditRecipe}
+                              onDelete={handleDeleteRecipe}
+                              userRole={userProfile?.role}
+                            />
+                          )}
+                        </>
+                      )}
+
+                      {/* Username prompt for first-time login */}
+                      {showUsernamePrompt && user && (
+                        <UsernamePrompt
+                          userId={user.id}
+                          onComplete={(username) => {
+                            setShowUsernamePrompt(false);
+                            // Update the profile in state
+                            if (userProfile) {
+                              setUserProfile({ ...userProfile, username });
+                            }
+                          }}
+                        />
+                      )}
+
+                      {/* Floating Add button */}
                       <button
-                        className="burger-menu-item"
-                        onClick={async () => {
-                          await supabase.auth.signOut();
-                          window.location.reload();
-                        }}
-                      >
-                        Déconnexion
-                      </button>
-                    ) : (
-                      <button
-                        className="burger-menu-item"
+                        className="add-btn-floating"
                         onClick={() => {
-                          window.location.href = '/login';
+                          if (!user) {
+                            window.location.href = '/login';
+                          } else {
+                            setIsAddMode(true);
+                          }
                         }}
+                        title="Ajouter une recette"
                       >
-                        Connexion
+                        + Ajouter
                       </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Desktop buttons */}
-                <div className="desktop-auth-buttons">
-                  {user && userProfile && (
-                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                      Tu es connecté•e, <strong>{userProfile.username || userProfile.email}</strong>
-                    </span>
-                  )}
-                  {user ? (
-                    <button
-                      className="logout-btn-header"
-                      onClick={async () => {
-                        await supabase.auth.signOut();
-                        window.location.reload();
-                      }}
-                    >
-                      Déconnexion
-                    </button>
-                  ) : (
-                    <button
-                      className="login-btn-header"
-                      onClick={() => {
-                        window.location.href = '/login';
-                      }}
-                    >
-                      Connexion
-                    </button>
-                  )}
-                </div>
-              </header>
-
-              <SearchBar value={searchTerm} onChange={setSearchTerm} />
-
-              {allTags.length > 0 && (
-                <FilterPills
-                  allTags={allTags}
-                  selectedTags={selectedFilterTags}
-                  onToggleTag={handleTagFilterToggle}
-                />
-              )}
-
-              <div className="filter-tabs">
-                <button
-                  className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
-                  onClick={() => setFilterType('all')}
-                >
-                  Toutes
-                </button>
-                <button
-                  className={`filter-tab ${filterType === 'yums' ? 'active' : ''}`}
-                  onClick={() => setFilterType('yums')}
-                >
-                  Mes Miams ❤️
-                </button>
-                <button
-                  className={`filter-tab ${filterType === 'my_creations' ? 'active' : ''}`}
-                  onClick={() => setFilterType('my_creations')}
-                >
-                  Mes Créations 🎨
-                </button>
-              </div>
-
-              <div className="recipe-list">
-                {filteredRecipes.length > 0 ? (
-                  filteredRecipes.map(recipe => (
-                    <RecipeCard
-                      key={recipe.id}
-                      recipe={recipe}
-                      onClick={() => setSelectedRecipeId(recipe.id)}
-                      isYummed={yums.includes(recipe.id)}
-                      onToggleYum={toggleYum}
-                    />
-                  ))
-                ) : (
-                  <div className="empty-state">
-                    <p>
-                      {filterType === 'yums'
-                        ? "Vous n'avez pas encore de Miams ! Ajoutez-en ❤️"
-                        : filterType === 'custom'
-                          ? "Pas encore de créations ! Lancez-vous 🍳"
-                          : filterType === 'my_creations'
-                            ? 'Aucune recette trouvée pour "Mes créations"'
-                            : searchTerm
-                              ? `Aucune recette trouvée pour "${searchTerm}"`
-                              : "Aucune recette trouvée"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <RecipeDetail
-              recipe={selectedRecipe}
-              onBack={() => setSelectedRecipeId(null)}
-              isYummed={selectedRecipe ? yums.includes(selectedRecipe.id) : false}
-              onToggleYum={selectedRecipe ? toggleYum : () => { }}
-              onAddComment={handleAddComment}
-              currentUser={user}
-              onEdit={handleEditRecipe}
-              onDelete={handleDeleteRecipe}
-              userRole={userProfile?.role}
-            />
-          )}
-        </>
-      )}
-
-      {/* Username prompt for first-time login */}
-      {showUsernamePrompt && user && (
-        <UsernamePrompt
-          userId={user.id}
-          onComplete={(username) => {
-            setShowUsernamePrompt(false);
-            // Update the profile in state
-            if (userProfile) {
-              setUserProfile({ ...userProfile, username });
-            }
-          }}
-        />
-      )}
-
-      {/* Floating Add button */}
-      <button
-        className="add-btn-floating"
-        onClick={() => {
-          if (!user) {
-            window.location.href = '/login';
-          } else {
-            setIsAddMode(true);
-          }
-        }}
-        title="Ajouter une recette"
-      >
-        + Ajouter
-      </button>
-    </div>
-  );
+                    </div>
+                    );
 };
 
 const RouterApp = () => (
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={<App />} />
-      <Route path="/admindesrecettes" element={<BackOffice />} />
-      <Route path="/login" element={<Login />} />
-    </Routes>
-  </BrowserRouter>
-);
+                    <BrowserRouter>
+                      <Routes>
+                        <Route path="/" element={<App />} />
+                        <Route path="/admindesrecettes" element={<BackOffice />} />
+                        <Route path="/login" element={<Login />} />
+                      </Routes>
+                    </BrowserRouter>
+                    );
 
-const container = document.getElementById('root');
-const root = createRoot(container!);
-root.render(<RouterApp />);
+                    const container = document.getElementById('root');
+                    const root = createRoot(container!);
+                    root.render(<RouterApp />);

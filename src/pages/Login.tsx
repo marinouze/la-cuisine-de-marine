@@ -7,10 +7,29 @@ const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [honeypot, setHoneypot] = useState(''); // Anti-bot honeypot
+    const [lastAttempt, setLastAttempt] = useState<number>(0); // Rate limiting
     const navigate = useNavigate();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 1. Honeypot check - block bots
+        if (honeypot !== '') {
+            console.warn('Bot detected on login form');
+            setMessage('Erreur de validation. Veuillez réessayer.');
+            return;
+        }
+
+        // 2. Rate limiting - prevent spam (60 seconds between attempts)
+        const now = Date.now();
+        if (now - lastAttempt < 60000) {
+            const waitTime = Math.ceil((60000 - (now - lastAttempt)) / 1000);
+            setMessage(`Veuillez attendre ${waitTime} secondes avant de réessayer.`);
+            return;
+        }
+
+        setLastAttempt(now);
         setLoading(true);
         setMessage('');
 
@@ -102,6 +121,23 @@ const Login: React.FC = () => {
             }}>{message}</div>}
 
             <form onSubmit={handleLogin}>
+                {/* Honeypot field - invisible to users, catches bots */}
+                <input
+                    type="text"
+                    name="username"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                    style={{
+                        position: 'absolute',
+                        left: '-9999px',
+                        width: '1px',
+                        height: '1px',
+                        opacity: 0
+                    }}
+                    tabIndex={-1}
+                    autoComplete="off"
+                />
+
                 <div className="form-group">
                     <input
                         type="email"
