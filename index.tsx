@@ -1071,7 +1071,7 @@ const App = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   {user && userProfile && (
                     <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                      Connecté en tant que <strong>{userProfile.username || userProfile.email}</strong>
+                      Connecté•e en tant que <strong>{userProfile.username || userProfile.email}</strong>
                     </span>
                   )}
                   <button
