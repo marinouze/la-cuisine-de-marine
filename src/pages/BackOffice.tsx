@@ -326,65 +326,89 @@ const BackOffice = () => {
 
             {activeTab === 'pending' && (
                 <div className="pending-recipes">
-                    <h2 style={{ marginBottom: '20px', color: '#ff6b35' }}>Recettes en attente de publication</h2>
-                    {recipes.filter(r => r.status === 'draft').length === 0 ? (
-                        <p style={{ padding: '40px', textAlign: 'center', color: '#999', background: 'white', borderRadius: '8px' }}>
-                            Aucune recette en attente ! 🎉
-                        </p>
-                    ) : (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
-                            <thead style={{ background: '#fff3e0' }}>
-                                <tr>
-                                    <th style={{ padding: '15px', textAlign: 'left' }}>Titre</th>
-                                    <th style={{ padding: '15px', textAlign: 'left' }}>Auteur</th>
-                                    <th style={{ padding: '15px', textAlign: 'left' }}>ID</th>
-                                    <th style={{ padding: '15px', textAlign: 'right' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recipes.filter(r => r.status === 'draft').map(recipe => (
-                                    <tr key={recipe.id} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '15px', fontWeight: 'bold' }}>{recipe.title}</td>
-                                        <td style={{ padding: '15px', color: '#666' }}>
-                                            {recipe.authorUsername || 'Anonyme'}
-                                        </td>
-                                        <td style={{ padding: '15px', fontSize: '0.9rem', color: '#999' }}>
-                                            #{recipe.id}
-                                        </td>
-                                        <td style={{ padding: '15px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                            <button
-                                                onClick={() => toggleRecipeStatus(recipe)}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    borderRadius: '6px',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
-                                                    color: 'white',
-                                                    fontWeight: 'bold',
-                                                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
-                                                }}
-                                            >
-                                                ✓ Publier
-                                            </button>
-                                            <button
-                                                onClick={() => deleteRecipe(recipe.id)}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #ccc',
-                                                    cursor: 'pointer',
-                                                    background: 'white',
-                                                    color: '#d32f2f'
-                                                }}
-                                            >
-                                                🗑 Rejeter
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    {editMode === 'list' ? (
+                        <>
+                            <h2 style={{ marginBottom: '20px', color: '#ff6b35' }}>Recettes en attente de publication</h2>
+                            {recipes.filter(r => r.status === 'draft').length === 0 ? (
+                                <p style={{ padding: '40px', textAlign: 'center', color: '#999', background: 'white', borderRadius: '8px' }}>
+                                    Aucune recette en attente ! 🎉
+                                </p>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
+                                    <thead style={{ background: '#fff3e0' }}>
+                                        <tr>
+                                            <th style={{ padding: '15px', textAlign: 'left' }}>Titre</th>
+                                            <th style={{ padding: '15px', textAlign: 'left' }}>Auteur</th>
+                                            <th style={{ padding: '15px', textAlign: 'left' }}>ID</th>
+                                            <th style={{ padding: '15px', textAlign: 'right' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {recipes.filter(r => r.status === 'draft').map(recipe => (
+                                            <tr key={recipe.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                <td style={{ padding: '15px', fontWeight: 'bold' }}>{recipe.title}</td>
+                                                <td style={{ padding: '15px', color: '#666' }}>
+                                                    {recipe.authorUsername || 'Anonyme'}
+                                                </td>
+                                                <td style={{ padding: '15px', fontSize: '0.9rem', color: '#999' }}>
+                                                    #{recipe.id}
+                                                </td>
+                                                <td style={{ padding: '15px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                                    <button
+                                                        onClick={() => toggleRecipeStatus(recipe)}
+                                                        style={{
+                                                            padding: '8px 16px',
+                                                            borderRadius: '6px',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+                                                            color: 'white',
+                                                            fontWeight: 'bold',
+                                                            boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                                                        }}
+                                                    >
+                                                        ✓ Publier
+                                                    </button>
+                                                    <button
+                                                        onClick={() => startEditingRecipe(recipe)}
+                                                        style={{
+                                                            padding: '8px 16px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid #ccc',
+                                                            cursor: 'pointer',
+                                                            background: '#e3f2fd',
+                                                            color: '#1976d2'
+                                                        }}
+                                                    >
+                                                        ✏️ Modifier
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteRecipe(recipe.id)}
+                                                        style={{
+                                                            padding: '8px 16px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid #ccc',
+                                                            cursor: 'pointer',
+                                                            background: 'white',
+                                                            color: '#d32f2f'
+                                                        }}
+                                                    >
+                                                        🗑 Rejeter
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </>
+                    ) : editingRecipe && (
+                        <RecipeEditForm
+                            recipe={editingRecipe}
+                            onSave={updateRecipe}
+                            onCancel={cancelEditing}
+                            availableTags={tags.map(t => t.name)}
+                        />
                     )}
                 </div>
             )}
