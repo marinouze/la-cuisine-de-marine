@@ -51,4 +51,4 @@ Si vous rencontrez des erreurs :
 
 ## Back-office
 
-Après la migration, seul l'utilisateur `aboo2003@hotmail.com` pourra gérer les tags dans le back-office à l'adresse `/admindesrecettes`.
+Après la migration, seul l'utilisateur dont l'email est configuré dans `VITE_ADMIN_EMAIL` pourra gérer les tags dans le back-office à l'adresse `/admindesrecettes`.

@@ -14,7 +14,7 @@ const Login: React.FC = () => {
         setMessage('');
 
         // Restrict login to admin email only
-        if (email !== 'aboo2003@hotmail.com') {
+        if (email !== import.meta.env.VITE_ADMIN_EMAIL) {
             setMessage('Accès refusé. Seul l\'administrateur peut se connecter.');
             setLoading(false);
             return;
@@ -36,7 +36,7 @@ const Login: React.FC = () => {
     React.useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                if (session.user.email === 'aboo2003@hotmail.com') {
+                if (session.user.email === import.meta.env.VITE_ADMIN_EMAIL) {
                     navigate('/admindesrecettes');
                 } else {
                     setMessage('Accès non autorisé.');
@@ -48,7 +48,7 @@ const Login: React.FC = () => {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session) {
-                if (session.user.email === 'aboo2003@hotmail.com') {
+                if (session.user.email === import.meta.env.VITE_ADMIN_EMAIL) {
                     navigate('/admindesrecettes');
                 } else {
                     setMessage('Accès non autorisé.');
