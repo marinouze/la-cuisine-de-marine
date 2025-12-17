@@ -1123,7 +1123,7 @@ const App = () => {
                   <div className="burger-menu-dropdown">
                     {user && userProfile && (
                       <div className="burger-menu-user-info">
-                        Connecté•e comme <strong>{userProfile.username || userProfile.email}</strong>
+                        Tu es connecté•e, <strong>{userProfile.username || userProfile.email}</strong>
                       </div>
                     )}
                     {user ? (
@@ -1153,7 +1153,7 @@ const App = () => {
                 <div className="desktop-auth-buttons">
                   {user && userProfile && (
                     <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                      Connecté•e comme <strong>{userProfile.username || userProfile.email}</strong>
+                      Tu es connecté•e, <strong>{userProfile.username || userProfile.email}</strong>
                     </span>
                   )}
                   {user ? (
