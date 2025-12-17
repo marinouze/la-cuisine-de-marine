@@ -26,7 +26,9 @@ const BackOffice = () => {
 
     const checkUser = async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session || session.user.email !== import.meta.env.VITE_ADMIN_EMAIL) {
+        const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || '';
+
+        if (!session || session.user.email?.trim().toLowerCase() !== adminEmail.trim().toLowerCase()) {
             navigate('/login');
         }
     };

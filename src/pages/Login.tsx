@@ -36,7 +36,8 @@ const Login: React.FC = () => {
     React.useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                if (session.user.email === import.meta.env.VITE_ADMIN_EMAIL) {
+                const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || '';
+                if (session.user.email?.trim().toLowerCase() === adminEmail.trim().toLowerCase()) {
                     navigate('/admindesrecettes');
                 } else {
                     setMessage('Accès non autorisé.');
@@ -48,7 +49,8 @@ const Login: React.FC = () => {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session) {
-                if (session.user.email === import.meta.env.VITE_ADMIN_EMAIL) {
+                const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || '';
+                if (session.user.email?.trim().toLowerCase() === adminEmail.trim().toLowerCase()) {
                     navigate('/admindesrecettes');
                 } else {
                     setMessage('Accès non autorisé.');
