@@ -663,6 +663,9 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
       .eq('status', 'published') // Only fetch published recipes for the main app
       .order('created_at', { ascending: false });
 
+    console.log('📊 RECIPES FETCHED FROM DB:', recipesData?.length, 'recipes');
+    console.log('📋 Titles:', recipesData?.map(r => r.title));
+
     if (recipesError) throw recipesError;
     if (!recipesData) return [];
 
@@ -968,10 +971,15 @@ const App = () => {
   };
 
 
+  console.log('🔍 FILTERING - Total recipes before filter:', allRecipes.length);
+  console.log('🔍 Search term:', searchTerm);
+  console.log('🔍 Filter type:', filterType);
+  console.log('🔍 Selected tags:', selectedFilterTags);
+
   const filteredRecipes = allRecipes.filter(r => {
     const matchesSearch =
       r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.ingredients.some(i => i?.ingredient?.toLowerCase().includes(searchTerm.toLowerCase()));
+      r.ingredients?.some(i => i?.ingredient?.toLowerCase().includes(searchTerm.toLowerCase()));
 
     let matchesFilter = true;
     if (filterType === 'yums') {
@@ -989,8 +997,15 @@ const App = () => {
       matchesTags = r.tags?.some(tag => selectedFilterTags.includes(tag)) || false;
     }
 
-    return matchesSearch && matchesFilter && matchesTags;
+    const passes = matchesSearch && matchesFilter && matchesTags;
+    if (!passes) {
+      console.log(`❌ Filtered out: "${r.title}" - search:${matchesSearch} filter:${matchesFilter} tags:${matchesTags}`);
+    }
+
+    return passes;
   });
+
+  console.log('✅ AFTER FILTER:', filteredRecipes.length, 'recipes');
 
   const selectedRecipe = allRecipes.find(r => r.id === selectedRecipeId);
 
