@@ -871,6 +871,7 @@ const App = () => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
+  const [isBurgerMenuOpen, setIsBurgerMenuOpen] = useState(false);
 
   // Fetch recipes and tags from Supabase on mount
   useEffect(() => {
@@ -1105,13 +1106,57 @@ const App = () => {
             <div className="list-view fade-in">
               <header className="main-header">
                 <h1 className="main-title">Mes Recettes</h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+
+                {/* Burger menu icon - visible on mobile */}
+                <button
+                  className="burger-menu-icon"
+                  onClick={() => setIsBurgerMenuOpen(!isBurgerMenuOpen)}
+                  aria-label="Menu"
+                >
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </button>
+
+                {/* Burger menu dropdown - visible on mobile when open */}
+                {isBurgerMenuOpen && (
+                  <div className="burger-menu-dropdown">
+                    {user && userProfile && (
+                      <div className="burger-menu-user-info">
+                        Connecté•e comme <strong>{userProfile.username || userProfile.email}</strong>
+                      </div>
+                    )}
+                    {user ? (
+                      <button
+                        className="burger-menu-item"
+                        onClick={async () => {
+                          await supabase.auth.signOut();
+                          window.location.reload();
+                        }}
+                      >
+                        Déconnexion
+                      </button>
+                    ) : (
+                      <button
+                        className="burger-menu-item"
+                        onClick={() => {
+                          window.location.href = '/login';
+                        }}
+                      >
+                        Connexion
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Desktop buttons */}
+                <div className="desktop-auth-buttons">
                   {user && userProfile && (
                     <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                      Connecté•e en tant que <strong>{userProfile.username || userProfile.email}</strong>
+                      Connecté•e comme <strong>{userProfile.username || userProfile.email}</strong>
                     </span>
                   )}
-                  {user && (
+                  {user ? (
                     <button
                       className="logout-btn-header"
                       onClick={async () => {
@@ -1121,19 +1166,16 @@ const App = () => {
                     >
                       Déconnexion
                     </button>
-                  )}
-                  <button
-                    className="add-btn-header"
-                    onClick={() => {
-                      if (!user) {
+                  ) : (
+                    <button
+                      className="login-btn-header"
+                      onClick={() => {
                         window.location.href = '/login';
-                      } else {
-                        setIsAddMode(true);
-                      }
-                    }}
-                  >
-                    + Ajouter
-                  </button>
+                      }}
+                    >
+                      Connexion
+                    </button>
+                  )}
                 </div>
               </header>
 
@@ -1225,6 +1267,21 @@ const App = () => {
           }}
         />
       )}
+
+      {/* Floating Add button */}
+      <button
+        className="add-btn-floating"
+        onClick={() => {
+          if (!user) {
+            window.location.href = '/login';
+          } else {
+            setIsAddMode(true);
+          }
+        }}
+        title="Ajouter une recette"
+      >
+        + Ajouter
+      </button>
     </div>
   );
 };
