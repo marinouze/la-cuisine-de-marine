@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { User, Session } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 
 import { supabase } from './src/supabaseClient';
-import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, type DbComment } from './src/types';
+import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, type DbComment, type Profile, dbProfileToProfile } from './src/types';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import BackOffice from './src/pages/BackOffice';
 import Login from './src/pages/Login';
@@ -173,16 +173,17 @@ interface RecipeDetailProps {
   currentUser: User | null;
   onEdit: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
+  userRole?: 'user' | 'admin';
 }
 
-const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, currentUser, onEdit, onDelete }: RecipeDetailProps) => {
+const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, currentUser, onEdit, onDelete, userRole }: RecipeDetailProps) => {
   const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recipe.imagePrompt)}?width=800&height=500&nologo=true`;
   const [newCommentName, setNewCommentName] = useState("");
   const [newCommentText, setNewCommentText] = useState("");
   const [newCommentRating, setNewCommentRating] = useState(0);
 
   // Check if user is owner or admin
-  const isAdmin = currentUser?.email === import.meta.env.VITE_ADMIN_EMAIL;
+  const isAdmin = userRole === 'admin';
   const isOwner = currentUser?.id === recipe.userId;
   const canEdit = isAdmin || isOwner;
 
@@ -827,6 +828,7 @@ const App = () => {
   const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom' | 'my_creations'>('all'); // Added 'my_creations'
   const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]); // For tag filtering
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   // Fetch recipes and tags from Supabase on mount
   useEffect(() => {
@@ -850,14 +852,36 @@ const App = () => {
     loadData();
   }, []);
 
-  // Check auth session
+  // Check auth session and fetch profile
   useEffect(() => {
+    const fetchProfile = async (userId: string) => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (data) {
+        setUserProfile(dbProfileToProfile(data));
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -1080,6 +1104,7 @@ const App = () => {
               currentUser={user}
               onEdit={handleEditRecipe}
               onDelete={handleDeleteRecipe}
+              userRole={userProfile?.role}
             />
           )}
 

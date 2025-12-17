@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { dbRecipeToRecipe, recipeToDbRecipeForUpdate, type Recipe, type DbRecipe } from '../types';
+import { dbRecipeToRecipe, recipeToDbRecipeForUpdate, type Recipe, type DbRecipe, type Profile, dbProfileToProfile } from '../types';
 import RecipeEditForm from '../components/RecipeEditForm';
 
 const BackOffice = () => {
@@ -26,9 +26,26 @@ const BackOffice = () => {
 
     const checkUser = async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || '';
 
-        if (!session || session.user.email?.trim().toLowerCase() !== adminEmail.trim().toLowerCase()) {
+        if (!session) {
+            navigate('/login');
+            return;
+        }
+
+        // Fetch profile to check role
+        const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+        if (!data) {
+            navigate('/login');
+            return;
+        }
+
+        const profile = dbProfileToProfile(data);
+        if (profile.role !== 'admin') {
             navigate('/login');
         }
     };

@@ -40,6 +40,14 @@ export interface DbComment {
     created_at?: string;
 }
 
+export interface DbProfile {
+    id: string; // UUID
+    email: string;
+    role: 'user' | 'admin';
+    created_at?: string;
+    updated_at?: string;
+}
+
 // Application types (already defined in index.tsx)
 export interface Ingredient {
     emoji: string;
@@ -77,6 +85,12 @@ export interface Tag {
     name: string;
     createdAt?: string;
     createdBy?: string;
+}
+
+export interface Profile {
+    id: string;
+    email: string;
+    role: 'user' | 'admin';
 }
 
 
@@ -165,3 +179,12 @@ export function tagToDbTag(tag: Omit<Tag, 'id' | 'createdAt'>): Omit<DbTag, 'id'
         created_by: tag.createdBy
     };
 }
+
+export function dbProfileToProfile(dbProfile: DbProfile): Profile {
+    return {
+        id: dbProfile.id,
+        email: dbProfile.email,
+        role: dbProfile.role
+    };
+}
+

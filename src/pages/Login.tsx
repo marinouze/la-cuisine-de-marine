@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { type Profile, dbProfileToProfile } from '../types';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -28,28 +29,49 @@ const Login: React.FC = () => {
         }
     };
 
-    // Check if session exists and redirect
+    // Check if session exists and redirect based on role
     React.useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        const checkAndRedirect = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || '';
-                if (session.user.email?.trim().toLowerCase() === adminEmail.trim().toLowerCase()) {
-                    navigate('/admindesrecettes');
-                } else {
-                    navigate('/');
+                // Fetch profile to get role
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (data) {
+                    const profile = dbProfileToProfile(data);
+                    if (profile.role === 'admin') {
+                        navigate('/admindesrecettes');
+                    } else {
+                        navigate('/');
+                    }
                 }
             }
-        });
+        };
+
+        checkAndRedirect();
 
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session) {
-                const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || '';
-                if (session.user.email?.trim().toLowerCase() === adminEmail.trim().toLowerCase()) {
-                    navigate('/admindesrecettes');
-                } else {
-                    navigate('/');
+                // Fetch profile to get role
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (data) {
+                    const profile = dbProfileToProfile(data);
+                    if (profile.role === 'admin') {
+                        navigate('/admindesrecettes');
+                    } else {
+                        navigate('/');
+                    }
                 }
             }
         });
