@@ -1160,7 +1160,7 @@ const App = () => {
           ) : !selectedRecipe ? (
             <div className="list-view fade-in">
               <header className="main-header">
-                <h1 className="main-title">Mes Recettes</h1>
+                <h1 className="main-title">La cuisine de Marine & Cie</h1>
 
                 {/* Burger menu icon - visible on mobile */}
                 <button
