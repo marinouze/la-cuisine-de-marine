@@ -147,6 +147,20 @@ const RecipeCard = ({ recipe, onClick, isYummed, onToggleYum }: RecipeCardProps)
   );
 };
 
+// Skeleton loader for recipe cards
+const RecipeCardSkeleton = () => {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton skeleton-thumb"></div>
+      <div className="skeleton-info">
+        <div className="skeleton skeleton-title"></div>
+        <div className="skeleton skeleton-text"></div>
+        <div className="skeleton skeleton-text-short"></div>
+      </div>
+    </div>
+  );
+};
+
 // --- Recipe Detail Components ---
 
 interface StarRatingProps {
@@ -716,16 +730,17 @@ async function linkTagsToRecipe(recipeId: number, tagNames: string[]): Promise<b
 
 
 // Fetch all recipes with their comments from Supabase
-async function fetchRecipesFromDB(): Promise<Recipe[]> {
+async function fetchRecipesFromDB(offset: number = 0, limit: number = 20): Promise<Recipe[]> {
   try {
-    // Fetch recipes - basic select without join
+    // Fetch recipes - basic select without join, with pagination
     const { data: recipesData, error: recipesError } = await supabase
       .from('recipes')
       .select('*')
       .eq('status', 'published') // Only fetch published recipes for the main app
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1); // Supabase uses inclusive range
 
-    console.log('📊 RECIPES FETCHED FROM DB:', recipesData?.length, 'recipes');
+    console.log('📊 RECIPES FETCHED FROM DB:', recipesData?.length, 'recipes', `(offset: ${offset}, limit: ${limit})`);
     console.log('📋 Titles:', recipesData?.map(r => r.title));
 
     if (recipesError) throw recipesError;
@@ -928,18 +943,25 @@ const App = () => {
   const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
   const [isBurgerMenuOpen, setIsBurgerMenuOpen] = useState(false);
 
-  // Fetch recipes and tags from Supabase on mount
+  // Infinite scroll pagination state
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Fetch initial recipes and tags from Supabase on mount
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
       setError(null);
       try {
         const [recipes, tags] = await Promise.all([
-          fetchRecipesFromDB(),
+          fetchRecipesFromDB(0, 20), // Load first 20 recipes
           fetchTagsFromDB()
         ]);
         setAllRecipes(recipes);
         setAllTags(tags);
+        setPage(1); // We've loaded page 0, next will be page 1
+        setHasMore(recipes.length === 20); // If we got less than 20, no more to load
       } catch (err) {
         console.error('Failed to load data:', err);
         setError('Impossible de charger les recettes. Vérifiez votre connexion.');
@@ -949,6 +971,48 @@ const App = () => {
     }
     loadData();
   }, []);
+
+  // Load more recipes (infinite scroll)
+  const loadMoreRecipes = async () => {
+    if (isLoadingMore || !hasMore) return;
+
+    setIsLoadingMore(true);
+    try {
+      const offset = page * 20;
+      const newRecipes = await fetchRecipesFromDB(offset, 10); // Load 10 more
+
+      if (newRecipes.length === 0) {
+        setHasMore(false);
+      } else {
+        setAllRecipes(prev => [...prev, ...newRecipes]);
+        setPage(prev => prev + 1);
+        setHasMore(newRecipes.length === 10);
+      }
+    } catch (err) {
+      console.error('Failed to load more recipes:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Infinite scroll detection
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!hasMore || isLoadingMore) return;
+
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = document.documentElement.scrollTop;
+      const clientHeight = document.documentElement.clientHeight;
+
+      // Load more when 200px from bottom
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        loadMoreRecipes();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasMore, isLoadingMore, page]);
 
   // Check auth session and fetch profile
   useEffect(() => {
@@ -1290,6 +1354,15 @@ const App = () => {
                               : "Aucune recette trouvée"}
                     </p>
                   </div>
+                )}
+
+                {/* Skeleton loaders while loading more recipes */}
+                {isLoadingMore && (
+                  <>
+                    <RecipeCardSkeleton />
+                    <RecipeCardSkeleton />
+                    <RecipeCardSkeleton />
+                  </>
                 )}
               </div>
             </div>
