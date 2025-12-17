@@ -28,6 +28,7 @@ jobs:
           # Add your Supabase environment variables as GitHub Secrets
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_ADMIN_EMAIL: ${{ secrets.VITE_ADMIN_EMAIL }}
           
       - name: Deploy to OVH via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
