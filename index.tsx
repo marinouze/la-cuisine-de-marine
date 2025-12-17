@@ -680,6 +680,8 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
     const userIds = [...new Set(recipesData.map(r => r.user_id).filter(Boolean))];
     let usernameMap = new Map<string, string>();
 
+    console.log('🔍 User IDs found in recipes:', userIds);
+
     if (userIds.length > 0) {
       try {
         const { data: profilesData } = await supabase
@@ -687,13 +689,17 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
           .select('id, username')
           .in('id', userIds);
 
+        console.log('👤 Profiles data fetched:', profilesData);
+
         if (profilesData) {
           profilesData.forEach(p => {
             if (p.username) usernameMap.set(p.id, p.username);
           });
         }
+
+        console.log('📝 Username map:', Array.from(usernameMap.entries()));
       } catch (error) {
-        console.log('Could not fetch usernames (profiles table may not exist yet)');
+        console.log('Could not fetch usernames (profiles table may not exist yet)', error);
       }
     }
 
