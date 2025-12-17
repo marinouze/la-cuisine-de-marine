@@ -188,6 +188,7 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, cur
   const [newCommentName, setNewCommentName] = useState("");
   const [newCommentText, setNewCommentText] = useState("");
   const [newCommentRating, setNewCommentRating] = useState(0);
+  const [honeypot, setHoneypot] = useState(""); // Anti-bot honeypot field
 
   // Check if user is owner or admin
   const isAdmin = userRole === 'admin';
@@ -196,6 +197,13 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, cur
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Honeypot: If this field is filled, it's a bot
+    if (honeypot !== '') {
+      console.warn('Bot detected - honeypot triggered');
+      return;
+    }
+
     if (newCommentName && newCommentText && newCommentRating > 0) {
       onAddComment(recipe.id, {
         user: newCommentName,
@@ -335,6 +343,24 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, cur
 
           <form className="add-comment-form" onSubmit={handleSubmitComment}>
             <h4>Ajouter un avis</h4>
+
+            {/* Honeypot field - hidden from users, catches bots */}
+            <input
+              type="text"
+              name="website"
+              value={honeypot}
+              onChange={e => setHoneypot(e.target.value)}
+              style={{
+                position: 'absolute',
+                left: '-9999px',
+                width: '1px',
+                height: '1px',
+                opacity: 0
+              }}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+
             <div className="form-group">
               <input
                 className="comment-input"
