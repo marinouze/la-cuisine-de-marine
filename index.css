@@ -1275,8 +1275,8 @@
 
 /* Small tag pills for recipe cards */
 .tag-pill-small {
-    background: rgba(69, 123, 157, 0.1);
-    color: var(--accent-color);
+    background: #f0f0f0;
+    color: #666;
     padding: 3px 8px;
     border-radius: 10px;
     font-size: 0.7rem;
