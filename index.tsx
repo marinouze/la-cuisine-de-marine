@@ -985,7 +985,9 @@ const App = () => {
 
     // Tag filtering: show recipes that have ANY of the selected tags
     let matchesTags = true;
-    matchesTags = r.tags?.some(tag => selectedFilterTags.includes(tag)) || false;
+    if (selectedFilterTags.length > 0) {
+      matchesTags = r.tags?.some(tag => selectedFilterTags.includes(tag)) || false;
+    }
 
     return matchesSearch && matchesFilter && matchesTags;
   });
