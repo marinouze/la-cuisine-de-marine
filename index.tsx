@@ -855,14 +855,23 @@ const App = () => {
   // Check auth session and fetch profile
   useEffect(() => {
     const fetchProfile = async (userId: string) => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
-      if (data) {
-        setUserProfile(dbProfileToProfile(data));
+        if (data && !error) {
+          setUserProfile(dbProfileToProfile(data));
+        } else {
+          // If profiles table doesn't exist yet or no profile found,
+          // fall back to email-based admin check
+          setUserProfile(null);
+        }
+      } catch (err) {
+        console.warn('Could not fetch profile (table may not exist yet):', err);
+        setUserProfile(null);
       }
     };
 
