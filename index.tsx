@@ -7,6 +7,7 @@ import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import BackOffice from './src/pages/BackOffice';
 import Login from './src/pages/Login';
+import UsernamePrompt from './src/components/UsernamePrompt';
 import { getIngredientEmoji } from './src/utils/ingredientEmoji';
 import TagSelector from './src/components/TagSelector';
 
@@ -832,6 +833,7 @@ const App = () => {
   const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]); // For tag filtering
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
 
   // Fetch recipes and tags from Supabase on mount
   useEffect(() => {
@@ -867,6 +869,10 @@ const App = () => {
 
         if (data && !error) {
           setUserProfile(dbProfileToProfile(data));
+          // Show username prompt if user doesn't have one yet
+          if (!data.username) {
+            setShowUsernamePrompt(true);
+          }
         } else {
           // If profiles table doesn't exist yet or no profile found,
           // fall back to email-based admin check
@@ -1062,7 +1068,25 @@ const App = () => {
             <div className="list-view fade-in">
               <header className="main-header">
                 <h1 className="main-title">Mes Recettes</h1>
-                <button className="add-btn-header" onClick={() => setIsAddMode(true)}>+ Ajouter</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {user && userProfile && (
+                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                      Connecté en tant que <strong>{userProfile.username || userProfile.email}</strong>
+                    </span>
+                  )}
+                  <button
+                    className="add-btn-header"
+                    onClick={() => {
+                      if (!user) {
+                        window.location.href = '/login';
+                      } else {
+                        setIsAddMode(true);
+                      }
+                    }}
+                  >
+                    + Ajouter
+                  </button>
+                </div>
               </header>
 
               <SearchBar value={searchTerm} onChange={setSearchTerm} />
@@ -1133,9 +1157,21 @@ const App = () => {
               userRole={userProfile?.role}
             />
           )}
-
-
         </>
+      )}
+
+      {/* Username prompt for first-time login */}
+      {showUsernamePrompt && user && (
+        <UsernamePrompt
+          userId={user.id}
+          onComplete={(username) => {
+            setShowUsernamePrompt(false);
+            // Update the profile in state
+            if (userProfile) {
+              setUserProfile({ ...userProfile, username });
+            }
+          }}
+        />
       )}
     </div>
   );

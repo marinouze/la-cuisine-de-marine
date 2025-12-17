@@ -43,6 +43,7 @@ export interface DbComment {
 export interface DbProfile {
     id: string; // UUID
     email: string;
+    username?: string;
     role: 'user' | 'admin';
     created_at?: string;
     updated_at?: string;
@@ -90,6 +91,7 @@ export interface Tag {
 export interface Profile {
     id: string;
     email: string;
+    username?: string;
     role: 'user' | 'admin';
 }
 
@@ -184,6 +186,7 @@ export function dbProfileToProfile(dbProfile: DbProfile): Profile {
     return {
         id: dbProfile.id,
         email: dbProfile.email,
+        username: dbProfile.username,
         role: dbProfile.role
     };
 }
