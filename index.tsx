@@ -1123,6 +1123,17 @@ const App = () => {
                   >
                     + Ajouter
                   </button>
+                  {user && (
+                    <button
+                      className="logout-btn-header"
+                      onClick={async () => {
+                        await supabase.auth.signOut();
+                        window.location.reload();
+                      }}
+                    >
+                      Déconnexion
+                    </button>
+                  )}
                 </div>
               </header>
 

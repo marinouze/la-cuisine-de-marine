@@ -83,6 +83,26 @@
     transform: scale(0.95);
 }
 
+.logout-btn-header {
+    background: transparent;
+    color: var(--primary-color);
+    padding: 8px 16px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 2px solid var(--primary-color);
+    transition: all 0.2s;
+}
+
+.logout-btn-header:hover {
+    background: rgba(230, 57, 70, 0.1);
+}
+
+.logout-btn-header:active {
+    transform: scale(0.95);
+}
+
 /* --- Search Bar --- */
 .search-wrapper {
     position: sticky;
