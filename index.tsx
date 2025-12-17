@@ -1089,8 +1089,8 @@ const App = () => {
                   Mes Miams ❤️
                 </button>
                 <button
-                  className={`filter-tab ${filterType === 'custom' ? 'active' : ''}`}
-                  onClick={() => setFilterType('custom')}
+                  className={`filter-tab ${filterType === 'my_creations' ? 'active' : ''}`}
+                  onClick={() => setFilterType('my_creations')}
                 >
                   Mes Créations 🎨
                 </button>
