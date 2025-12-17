@@ -13,12 +13,8 @@ const Login: React.FC = () => {
         setLoading(true);
         setMessage('');
 
-        const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || '';
-        if (email.trim().toLowerCase() !== adminEmail.trim().toLowerCase()) {
-            setMessage('Accès refusé. Seul l\'administrateur peut se connecter.');
-            setLoading(false);
-            return;
-        }
+        // Allow any email to login
+        // Admin check is done later for redirection
 
         try {
             const { error } = await supabase.auth.signInWithOtp({ email });
@@ -40,7 +36,7 @@ const Login: React.FC = () => {
                 if (session.user.email?.trim().toLowerCase() === adminEmail.trim().toLowerCase()) {
                     navigate('/admindesrecettes');
                 } else {
-                    setMessage('Accès non autorisé.');
+                    navigate('/');
                 }
             }
         });
@@ -53,7 +49,7 @@ const Login: React.FC = () => {
                 if (session.user.email?.trim().toLowerCase() === adminEmail.trim().toLowerCase()) {
                     navigate('/admindesrecettes');
                 } else {
-                    setMessage('Accès non autorisé.');
+                    navigate('/');
                 }
             }
         });
@@ -71,8 +67,8 @@ const Login: React.FC = () => {
             borderRadius: '16px',
             boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
         }}>
-            <h2 style={{ fontFamily: 'Pacifico, cursive', color: 'var(--primary-color)' }}>Connexion Admin</h2>
-            <p style={{ marginBottom: '20px', color: '#666' }}>Connectez-vous pour gérer les recettes.</p>
+            <h2 style={{ fontFamily: 'Pacifico, cursive', color: 'var(--primary-color)' }}>Connexion</h2>
+            <p style={{ marginBottom: '20px', color: '#666' }}>Connectez-vous pour gérer vos recettes.</p>
 
             {message && <div style={{
                 padding: '10px',

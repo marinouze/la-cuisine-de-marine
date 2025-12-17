@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { User, Session } from '@supabase/supabase-js';
 
 import { supabase } from './src/supabaseClient';
 import { dbRecipeToRecipe, recipeToDbRecipe, commentToDbComment, type DbRecipe, type DbComment } from './src/types';
@@ -36,6 +37,8 @@ interface Recipe {
   servings: number;
   tags?: string[];
   isCustom?: boolean;
+  status?: 'draft' | 'published';
+  userId?: string;
   comments?: Comment[];
 }
 
@@ -167,13 +170,21 @@ interface RecipeDetailProps {
   isYummed: boolean;
   onToggleYum: (id: number) => void;
   onAddComment: (recipeId: number, comment: Omit<Comment, 'id'>) => void;
+  currentUser: User | null;
+  onEdit: (recipe: Recipe) => void;
+  onDelete: (recipe: Recipe) => void;
 }
 
-const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }: RecipeDetailProps) => {
+const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment, currentUser, onEdit, onDelete }: RecipeDetailProps) => {
   const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recipe.imagePrompt)}?width=800&height=500&nologo=true`;
   const [newCommentName, setNewCommentName] = useState("");
   const [newCommentText, setNewCommentText] = useState("");
   const [newCommentRating, setNewCommentRating] = useState(0);
+
+  // Check if user is owner or admin
+  const isAdmin = currentUser?.email === import.meta.env.VITE_ADMIN_EMAIL;
+  const isOwner = currentUser?.id === recipe.userId;
+  const canEdit = isAdmin || isOwner;
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,13 +213,42 @@ const RecipeDetail = ({ recipe, onBack, isYummed, onToggleYum, onAddComment }: R
         <div className="detail-image-container">
           <img src={imageUrl} alt={recipe.title} className="detail-image" />
 
-          <button
-            className={`yum-fab ${isYummed ? 'active' : ''}`}
-            onClick={() => onToggleYum(recipe.id)}
-            aria-label={isYummed ? "Retirer des Miams" : "Ajouter aux Miams"}
-          >
-            {isYummed ? '❤️' : '🤍'}
-          </button>
+          <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 10 }}>
+            {canEdit && (
+              <>
+                <button
+                  onClick={() => onEdit(recipe)}
+                  style={{
+                    background: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                  }}
+                  title="Modifier"
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Supprimer cette recette ?')) onDelete(recipe);
+                  }}
+                  style={{
+                    background: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                  }}
+                  title="Supprimer"
+                >
+                  🗑️
+                </button>
+              </>
+            )}
+            <button
+              className={`yum-fab ${isYummed ? 'active' : ''}`}
+              style={{ position: 'static', margin: 0 }} // Override absolute positioning of yum-fab class
+              onClick={() => onToggleYum(recipe.id)}
+              aria-label={isYummed ? "Retirer des Miams" : "Ajouter aux Miams"}
+            >
+              {isYummed ? '❤️' : '🤍'}
+            </button>
+          </div>
 
           <div className="detail-meta-overlay">
             <div className="meta-pill">👤 {recipe.servings} pers.</div>
@@ -325,24 +365,32 @@ interface AddRecipeFormProps {
   onSave: (recipe: Recipe) => void;
   onCancel: () => void;
   availableTags: string[];
+  user: User | null;
+  initialRecipe?: Recipe;
 }
 
-const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) => {
-  const [title, setTitle] = useState("");
-  const [prepTime, setPrepTime] = useState("");
-  const [cookTime, setCookTime] = useState("");
-  const [servings, setServings] = useState(2);
+const AddRecipeForm = ({ onSave, onCancel, availableTags, user, initialRecipe }: AddRecipeFormProps) => {
+  const [title, setTitle] = useState(initialRecipe?.title || "");
+  const [prepTime, setPrepTime] = useState(initialRecipe?.prepTime || "");
+  const [cookTime, setCookTime] = useState(initialRecipe?.cookTime || "");
+  const [servings, setServings] = useState(initialRecipe?.servings || 2);
 
   const UNIT_OPTIONS = ["(vide)", "g", "kg", "ml", "cl", "L", "c.à.s", "c.à.c", "pincée", "verre", "tasse"];
 
   // Ingredients: Separate fields
-  const [ingredients, setIngredients] = useState<{ qty: string, unit: string, name: string }[]>([{ qty: "", unit: "", name: "" }]);
+  const [ingredients, setIngredients] = useState<{ qty: string, unit: string, name: string }[]>(
+    initialRecipe?.ingredients.map(i => ({
+      qty: i.quantity?.toString() || "",
+      unit: i.unit || "",
+      name: i.ingredient
+    })) || [{ qty: "", unit: "", name: "" }]
+  );
 
   // Steps
-  const [steps, setSteps] = useState<string[]>([""]);
+  const [steps, setSteps] = useState<string[]>(initialRecipe?.steps || [""]);
 
   // Tags
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialRecipe?.tags || []);
 
   const handleAddIngredient = () => {
     setIngredients([...ingredients, { qty: "", unit: "", name: "" }]);
@@ -392,7 +440,7 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) 
 
     // Construct Recipe Object
     const newRecipe: Recipe = {
-      id: Date.now(), // Simple ID generation
+      id: initialRecipe?.id || Date.now(), // Use existing ID if editing
       title,
       imagePrompt: `${title} gourmet food warm photography`,
       ingredients: ingredients
@@ -409,7 +457,9 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) 
       servings,
       tags: selectedTags,
       isCustom: true,
-      comments: []
+      status: initialRecipe?.status || 'published',
+      userId: initialRecipe?.userId || user?.id, // Preserve original owner if editing (though usually only owner edits)
+      comments: initialRecipe?.comments || []
     };
 
     onSave(newRecipe);
@@ -420,7 +470,9 @@ const AddRecipeForm = ({ onSave, onCancel, availableTags }: AddRecipeFormProps) 
       <button className="back-button" style={{ position: 'static', marginBottom: '20px' }} onClick={onCancel}>
         ⬅ Annuler
       </button>
-      <h2 style={{ fontFamily: 'Pacifico, cursive', margin: '0 0 20px 0', color: 'var(--primary-color)', textAlign: 'center' }}>Nouvelle Recette</h2>
+      <h2 style={{ fontFamily: 'Pacifico, cursive', margin: '0 0 20px 0', color: 'var(--primary-color)', textAlign: 'center' }}>
+        {initialRecipe ? 'Modifier la Recette' : 'Nouvelle Recette'}
+      </h2>
 
       <form onSubmit={handleSubmit} className="add-recipe-form">
 
@@ -655,6 +707,52 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
 }
 
 
+// Update an existing recipe in Supabase
+async function updateRecipeInDB(recipe: Recipe): Promise<boolean> {
+  try {
+    const dbRecipe = recipeToDbRecipe(recipe);
+    // Remove fields that shouldn't be updated or cause issues if missing (though recipeToDbRecipe handles most)
+    // We need to handle tags too.
+
+    const { error } = await supabase
+      .from('recipes')
+      .update(dbRecipe)
+      .eq('id', recipe.id);
+
+    if (error) throw error;
+
+    // Handle Tags
+    if (recipe.tags) {
+      // Ensure tags exist
+      for (const tagName of recipe.tags) {
+        await saveTagToDB(tagName);
+      }
+      await linkTagsToRecipe(recipe.id, recipe.tags);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error updating recipe:', error);
+    return false;
+  }
+}
+
+// Delete a recipe
+async function deleteRecipeFromDB(id: number): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('recipes')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting recipe:', error);
+    return false;
+  }
+}
+
 // Save a new recipe to Supabase
 async function saveRecipeToDB(recipe: Omit<Recipe, 'id' | 'comments'>): Promise<Recipe | null> {
   try {
@@ -723,10 +821,12 @@ const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
   const [isAddMode, setIsAddMode] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null); // For edit mode
   const [searchTerm, setSearchTerm] = useState("");
   const [yums, setYums] = useState<number[]>([]);
-  const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom'>('all'); // 'all', 'yums', 'custom'
+  const [filterType, setFilterType] = useState<'all' | 'yums' | 'custom' | 'my_creations'>('all'); // Added 'my_creations'
   const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]); // For tag filtering
+  const [user, setUser] = useState<User | null>(null);
 
   // Fetch recipes and tags from Supabase on mount
   useEffect(() => {
@@ -750,6 +850,19 @@ const App = () => {
     loadData();
   }, []);
 
+  // Check auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
 
   const toggleYum = (id: number) => {
     setYums(prev =>
@@ -767,13 +880,43 @@ const App = () => {
 
 
   const handleSaveRecipe = async (newRecipe: Recipe) => {
-    const savedRecipe = await saveRecipeToDB(newRecipe);
-    if (savedRecipe) {
-      setAllRecipes([savedRecipe, ...allRecipes]);
-      setIsAddMode(false);
-      setFilterType('custom'); // Switch to custom view to see the new recipe
+    if (editingRecipe) {
+      // Update existing
+      const success = await updateRecipeInDB(newRecipe);
+      if (success) {
+        setAllRecipes(prev => prev.map(r => r.id === newRecipe.id ? newRecipe : r));
+        setIsAddMode(false);
+        setEditingRecipe(null);
+        // Stay on detail view or go back? Let's go to detail view of updated recipe
+        setSelectedRecipeId(newRecipe.id);
+      } else {
+        alert('Erreur lors de la modification.');
+      }
     } else {
-      alert('Erreur lors de la sauvegarde de la recette. Veuillez réessayer.');
+      // Create new
+      const savedRecipe = await saveRecipeToDB(newRecipe);
+      if (savedRecipe) {
+        setAllRecipes([savedRecipe, ...allRecipes]);
+        setIsAddMode(false);
+        setFilterType('custom'); // Switch to custom view to see the new recipe
+      } else {
+        alert('Erreur lors de la sauvegarde de la recette. Veuillez réessayer.');
+      }
+    }
+  };
+
+  const handleEditRecipe = (recipe: Recipe) => {
+    setEditingRecipe(recipe);
+    setIsAddMode(true);
+  };
+
+  const handleDeleteRecipe = async (recipe: Recipe) => {
+    const success = await deleteRecipeFromDB(recipe.id);
+    if (success) {
+      setAllRecipes(prev => prev.filter(r => r.id !== recipe.id));
+      setSelectedRecipeId(null); // Go back to list
+    } else {
+      alert('Erreur lors de la suppression.');
     }
   };
 
@@ -798,14 +941,18 @@ const App = () => {
       r.ingredients.some(i => i?.ingredient?.toLowerCase().includes(searchTerm.toLowerCase()));
 
     let matchesFilter = true;
-    if (filterType === 'yums') matchesFilter = yums.includes(r.id);
-    if (filterType === 'custom') matchesFilter = !!r.isCustom;
+    if (filterType === 'yums') {
+      matchesFilter = yums.includes(r.id);
+    } else if (filterType === 'custom') {
+      matchesFilter = !!r.isCustom;
+    } else if (filterType === 'my_creations') {
+      if (!user) return false;
+      matchesFilter = r.userId === user.id;
+    }
 
     // Tag filtering: show recipes that have ANY of the selected tags
     let matchesTags = true;
-    if (selectedFilterTags.length > 0) {
-      matchesTags = r.tags?.some(tag => selectedFilterTags.includes(tag)) || false;
-    }
+    matchesTags = r.tags?.some(tag => selectedFilterTags.includes(tag)) || false;
 
     return matchesSearch && matchesFilter && matchesTags;
   });
@@ -853,8 +1000,13 @@ const App = () => {
           {isAddMode ? (
             <AddRecipeForm
               onSave={handleSaveRecipe}
-              onCancel={() => setIsAddMode(false)}
+              onCancel={() => {
+                setIsAddMode(false);
+                setEditingRecipe(null);
+              }}
               availableTags={allTags}
+              user={user}
+              initialRecipe={editingRecipe || undefined}
             />
           ) : !selectedRecipe ? (
             <div className="list-view fade-in">
@@ -922,9 +1074,12 @@ const App = () => {
             <RecipeDetail
               recipe={selectedRecipe}
               onBack={() => setSelectedRecipeId(null)}
-              isYummed={yums.includes(selectedRecipe.id)}
-              onToggleYum={toggleYum}
+              isYummed={selectedRecipe ? yums.includes(selectedRecipe.id) : false}
+              onToggleYum={selectedRecipe ? toggleYum : () => { }}
               onAddComment={handleAddComment}
+              currentUser={user}
+              onEdit={handleEditRecipe}
+              onDelete={handleDeleteRecipe}
             />
           )}
 

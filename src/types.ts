@@ -10,6 +10,7 @@ export interface DbRecipe {
     servings: number;
     is_custom: boolean;
     status: 'draft' | 'published';
+    user_id?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -67,6 +68,7 @@ export interface Recipe {
     tags?: string[];
     isCustom?: boolean;
     status?: 'draft' | 'published';
+    userId?: string;
     comments?: Comment[];
 }
 
@@ -92,6 +94,7 @@ export function dbRecipeToRecipe(dbRecipe: DbRecipe, comments: DbComment[] = [])
         tags: [], // Tags will be populated separately from recipe_tags table
         isCustom: dbRecipe.is_custom,
         status: dbRecipe.status,
+        userId: dbRecipe.user_id,
         comments: comments.map(dbCommentToComment)
     };
 }
@@ -106,7 +109,8 @@ export function recipeToDbRecipe(recipe: Omit<Recipe, 'id' | 'comments'>): Omit<
         cook_time: recipe.cookTime,
         servings: recipe.servings,
         is_custom: recipe.isCustom || false,
-        status: recipe.status || 'draft'
+        status: recipe.status || 'draft',
+        user_id: recipe.userId
     };
 }
 
@@ -121,7 +125,8 @@ export function recipeToDbRecipeForUpdate(recipe: Recipe): Partial<DbRecipe> {
         cook_time: recipe.cookTime,
         servings: recipe.servings,
         is_custom: recipe.isCustom || false,
-        status: recipe.status || 'draft'
+        status: recipe.status || 'draft',
+        user_id: recipe.userId
     };
 }
 
