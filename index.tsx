@@ -663,13 +663,10 @@ async function linkTagsToRecipe(recipeId: number, tagNames: string[]): Promise<b
 // Fetch all recipes with their comments from Supabase
 async function fetchRecipesFromDB(): Promise<Recipe[]> {
   try {
-    // Fetch recipes with author username
+    // Fetch recipes - basic select without join
     const { data: recipesData, error: recipesError } = await supabase
       .from('recipes')
-      .select(`
-        *,
-        profiles:user_id (username)
-      `)
+      .select('*')
       .eq('status', 'published') // Only fetch published recipes for the main app
       .order('created_at', { ascending: false });
 
@@ -678,6 +675,27 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
 
     if (recipesError) throw recipesError;
     if (!recipesData) return [];
+
+    // Fetch usernames for recipes that have user_id
+    const userIds = [...new Set(recipesData.map(r => r.user_id).filter(Boolean))];
+    let usernameMap = new Map<string, string>();
+
+    if (userIds.length > 0) {
+      try {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', userIds);
+
+        if (profilesData) {
+          profilesData.forEach(p => {
+            if (p.username) usernameMap.set(p.id, p.username);
+          });
+        }
+      } catch (error) {
+        console.log('Could not fetch usernames (profiles table may not exist yet)');
+      }
+    }
 
     // Fetch all comments
     const { data: commentsData, error: commentsError } = await supabase
@@ -712,8 +730,10 @@ async function fetchRecipesFromDB(): Promise<Recipe[]> {
     return recipesData.map(dbRecipe => {
       const recipe = dbRecipeToRecipe(dbRecipe as DbRecipe, commentsByRecipe.get(dbRecipe.id) || []);
       recipe.tags = tagsByRecipe.get(dbRecipe.id) || [];
-      // Extract author username from joined profile data
-      recipe.authorUsername = (dbRecipe as any).profiles?.username;
+      // Extract author username from username map
+      if (dbRecipe.user_id) {
+        recipe.authorUsername = usernameMap.get(dbRecipe.user_id);
+      }
       return recipe;
     });
   } catch (error) {
