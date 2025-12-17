@@ -14,9 +14,8 @@ const Login: React.FC = () => {
         setMessage('');
 
         // Restrict login to admin email only
-        console.log('Login attempt:', { email, expected: import.meta.env.VITE_ADMIN_EMAIL });
         if (email !== import.meta.env.VITE_ADMIN_EMAIL) {
-            setMessage(`DEBUG: Entré: "${email}", Attendu: "${import.meta.env.VITE_ADMIN_EMAIL}". Accès refusé.`);
+            setMessage('Accès refusé. Seul l\'administrateur peut se connecter.');
             setLoading(false);
             return;
         }
